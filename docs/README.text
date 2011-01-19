@@ -1,0 +1,28 @@
+README.text -- Textfile-based user authentication
+-------------------------------------------------
+
+you don't need a database anymore for storing user data! a plain text file
+will do it as well...
+
+structure:
+---
+username1:password1:uid1:gid1
+username2:password2:uid2:gid2
+...
+usernamen:passwordn:uidn:gidn
+---
+
+exapmple:
+---
+phanatic:password:1000:1000
+anonymous:anonymous:0:0
+---
+
+config.php editing:
+ - $CFG->dbtype = "text" -- this is needed to use a textfile as database...
+ - $CFG->text['file'] = "path/to/userdata.txt" -- sets the file where your user's datas are...
+ - $CFG->text['sep'] = ":" -- you can leave it...
+
+note: the file must be readable for the user running nanoFTPd
+
+ -- written by Phanatic <linux@psoftwares.hu>

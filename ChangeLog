@@ -1,0 +1,45 @@
+2003/01/17 - v0.0.2 - Phanatic <linux@psoftwares.hu>
+ - closed bug (#662532)
+
+2003/01/16 - Phanatic <linux@psoftwares.hu>
+ - added directory handling (MKD and RMD)
+ - added renaming capability (RNFR and RNTO)
+ - added append support (APPE)
+
+2003/01/16 - Arjen <arjenjb@wanadoo.nl>
+ - added directive max_conn and max_conn_per_ip
+ - improved logging
+ - added logging to console
+ 
+2003/01/03 - Phanatic <linux@psoftwares.hu>
+ - closed bug (#661544)
+
+2003/01/02 - Phanatic <linux@psoftwares.hu>
+ - added textfile-based user authentication
+ - added comments to config.php
+ - added docs/README.text
+
+2003/01/01 - v0.0.1 - Phanatic <linux@psoftwares.hu>
+ - added INSTALL to README
+ - added TESTED CLIENTS to README
+ - added SITE CHMOD command
+ - minor bugfixes (directory listing)
+
+2002/12/31 - Phanatic <linux@psoftwares.hu>
+ - added logging
+ - added postgresql support
+ - added database customization
+ - added dynamic ip support
+ - added more documentation
+
+2002/12/26 - Phanatic <linux@psoftwares.hu>
+ - added authentication library (auth.php)
+ - added DELE command support (nanoftpd.php)
+ - added RETR authentication check (nanoftpd.php)
+ - added command descriptions (nanoftpd.php)
+ - more detailed infos (README)
+
+2002/12/25 - Phanatic <linux@psoftwares.hu>
+ - added formatted list output (nanoftpd.php)
+ - added owner, group and last modification infos (io_file.php)
+ - added permissions (io_file.php)

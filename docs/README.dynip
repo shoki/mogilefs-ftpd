@@ -1,0 +1,17 @@
+README.dynip -- Dynamic IP support
+----------------------------------
+
+dynamic ip support means that nanoFTPd can automatically determine the ip address
+of the specified device.
+
+requirements:
+ - ifconfig utility
+ - grep and cut commands
+these are automatically installed on most of the systems...
+
+your tasks:
+ - enable dynamic ip support -- $CFG->dynip['on'] = 1; (config.php)
+ - set your device -- $CFG->dynip['iface'] = "<your_device>"; (config.php)
+<your_device> can be, for example: ppp0, eth0, etc.
+
+ -- written by Phanatic <linux@psoftwares.hu>

@@ -1,0 +1,19 @@
+README.mysql -- README for MySQL users
+--------------------------------------
+
+first you have to connect to the server:
+ $ mysql -u username -p
+(you can use a frontend, e.g. phpMyAdmin)
+
+use this command to create a table for the user data:
+---
+CREATE TABLE users (
+    username varchar(20) NOT NULL default '',
+    password varchar(100) NOT NULL default '',
+    uid int(5) NOT NULL default '',
+    gid int(5) NOT NULL default '',
+    UNIQUE KEY username (username)
+)
+---
+
+ -- written by Phanatic <linux@psoftwares.hu>
