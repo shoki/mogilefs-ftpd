@@ -198,7 +198,7 @@ class io_mogilefs {
 	}
 
 	protected function msg($msg) {
-		$this->log->write(__CLASS__.": ".$msg);
+		$this->log->write(__CLASS__.": domain=".$this->mogilefs_domain." ".$msg);
 	}
 
 	public function close() {
