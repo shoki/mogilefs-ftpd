@@ -145,7 +145,7 @@ class io_mogilefs_ug extends io_mogilefs {
 
 		// invalidate cache
 		$errorReporting = error_reporting(0);
-		$result = file_get_contents("http://i.kw.cx/invalidate?key=mg:/$fileId", false, $context);
+		$result = file_get_contents("http://i.kw.cx/invalidate?key=mg:kwick:/$fileId", false, $context);
 		error_reporting($errorReporting);
 
 		if (false !== $result) {
