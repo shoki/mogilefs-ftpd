@@ -174,10 +174,10 @@ class io_mogilefs {
 	}
 
 	protected function getMeta($filename) {
-		$this->msg("get meta for: ".$filename."\n");
+		//$this->msg("get meta for: ".$filename."\n");
 		/* get and cache metadata */
 		if (isset($this->metaCache[$filename])) return $this->metaCache[$filename];
-		$this->msg("get meta for: ".$filename." not cached"."\n");
+		//$this->msg("get meta for: ".$filename." not cached"."\n");
 		try {
 			$this->metaCache[$filename]['path'] = $meta = $this->store->get($filename);
 			$this->msg("get file from mogile: ".$meta["path1"]."\n");
