@@ -43,6 +43,41 @@ class io_mogilefs_userpic extends io_mogilefs {
 	public function cwd() {
 		return true; /* all good */
 	}
+
+	protected function invalidateFrontendCache($fileId) {
+		$opts = array('http' =>
+			array(
+				'timeout'  => "2.0",
+			)
+		);
+
+		$context = stream_context_create($opts);
+
+		// invalidate cache
+		$errorReporting = error_reporting(0);
+		$result = file_get_contents("http://".$this->mogilefs_frontend."/invalidate?key=mg:".$this->mogilefs_domain.":/$fileId", false, $context);
+		error_reporting($errorReporting);
+
+		if (false !== $result) {
+			return true;
+		}
+
+		return false;
+	}
+
+	protected function delete($filename) {
+		$delrc = parent::delete($filename);
+		$icrc = $this->invalidateFrontendCache($filename);
+		$this->msg("delete $filename: ".($delrc ? 'done' : 'failed')." invalidate: ".($icrc ? 'done' : 'failed')."\n");
+	}
+	
+
+	public function rm($filename) {
+		$filename = $this->getFilename($filename);
+		parent::rm($filename);
+		return true; /* alway good */
+	}
+
 }
 
 ?>
