@@ -83,7 +83,7 @@ class io_mogilefs_userpic extends io_mogilefs {
 		/* need to invalidate cache when a file is overwritten */
 		if ($this->saveonclose) {
 			$ret = $this->invalidateFrontendCache($this->filename);
-			$this->msg("saveonclose invalidate cache for ".$this->filename." returned: ".$ret."\n");
+			$this->msg("saveonclose invalidate cache for ".$this->filename." returned: ".($ret ? 'done' : 'failed')."\n");
 		}
 		parent::close();
 	}
