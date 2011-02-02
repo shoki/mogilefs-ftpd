@@ -725,7 +725,7 @@ class client {
 			if (! $pool->exists($port)) {
 				$pool->add($port);
 
-				$c = socket_bind($socket, $this->CFG->listen_addr, $port);
+				$c = @socket_bind($socket, $this->CFG->listen_addr, $port);
 				if (!$c)
 					$this->log->write("socket_bind error: ".socket_strerror(socket_last_error($socket))."\n");
 				else {
