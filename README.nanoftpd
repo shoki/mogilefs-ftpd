@@ -1,0 +1,59 @@
+nanoFTPd README
+---------------
+
+1. REQUIREMENTS
+you need two things to run nanoFTPd: PHP (at least 4.2.0) and a database server
+(possibly MySQL or PostgreSQL). the minimal ./configure directives for PHP:
+ --enable-cli
+ --enable-sockets
+ --enable-posix
+ --with-mysql / --with-pgsql (depends on your database)
+to get the best performance, please: --disable-cgi (but this is not neccessary)
+
+2. CONFIGURATION
+before you can run nanoFTPd, you have to do some pre-configuration. this includes:
+ - changing the variables in config.php
+ - change the first line of nanoftpd.php to the path to php binary on your computer
+
+3. DATABASE
+about creating a users table, please see the corresponding README file in the docs/
+directory (README.mysql, README.pgsql)
+ > notes:
+   - the password has to be md5() encrypted
+   - the uid/gid values should be valid system uids/gids
+
+4. INSTALL
+it's easy: you only have to copy the whole directory (with subdirectories) into a
+directory of your choice... e.g. /usr/share/nanoftpd
+(working on a better structure -- e.g. config.php into /etc, nanoftpd.php into
+/usr/sbin)
+
+5. RUNNING/STOPPING
+to run nanoFTPd, you have to type:
+ $ /path/to/nanoftpd.php
+or:
+ $ /path/to/php-cgi -q /path/to/nanoftpd.php
+or:
+ $ /path/to/php-cli /path/to/nanoftpd.php
+you can stop nanoFTPd by typing:
+ $ killall nanoftpd.php
+or:
+ by hitting Ctrl-C on the terminal running nanoFTPd.
+
+6. WINDOWS
+nanoFTPd doesn't support Windows currently, because the authentication library makes
+use of the PHP POSIX extension, which is available only on UNIX-like systems...
+
+7. TESTED CLIENTS
+these are: ftp, gFTP, SmartFTP, Windows integrated FTP explorer
+i know, that nanoFTPd should work with all ftp clients, but there could be some special
+syntaxes... e.g. mc doesn't work (but i'm on the way to fix it)
+
+8. DEVELOPERS
+Arjen <arjenjb@wanadoo.nl>
+Phanatic <linux@psoftwares.hu>
+
+9. LICENSE
+nanoFTPd is licensed under the terms of GPL, v2 - see attached LICENSE file for details.
+
+ -- written by Phanatic <linux@psoftwares.hu>

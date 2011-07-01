@@ -57,7 +57,7 @@ $CFG->text['sep']		= ":";					// the character which separates the columns
 
 
 $CFG->listen_addr 		= "62.146.70.152";			// IP address where nanoFTPd should listen
-$CFG->listen_port 		= 2121;					// port where nanoFTPd should listen
+$CFG->listen_port 		= 21;					// port where nanoFTPd should listen
 $CFG->low_port			= 15000;
 $CFG->high_port			= 25000;
 $CFG->max_conn			= 10;					// max number of connections allowed
