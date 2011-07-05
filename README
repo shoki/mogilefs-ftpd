@@ -19,3 +19,27 @@ Original Nanoftpd Authors:
 Arjen <arjenjb@wanadoo.nl>
 Phanatic <linux@psoftwares.hu>
 
+Installation
+============
+You need at least PHP 5.2.6 and these PHP extensions to run mogilefs-ftpd:
+ 
+* sockets
+* pcntl
+* PECL MogileFS (http://projects.usrportage.de/index.fcgi/php-mogilefs)
+* PECL proctitle (optional)
+
+There is a logrotate config and a init script available in the contrib
+directory.
+
+Hints
+=====
+1. io_file and the database authentication modules are not tested by me and I
+don't know if they work.
+
+2. i use the ftp daemon with the text database authentication which also
+supports using custom IO modules for any user. 
+
+3. path convention is <mogilefs class>/<filename>. If your mogilefs is not
+using this convention you can still use this module but the listing feature
+won't work.
+

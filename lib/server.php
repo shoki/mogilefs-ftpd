@@ -26,8 +26,6 @@ class server {
 
 	var $pids = array();
 
-	const CHECK_CONNECTION_LIMITS = false;
-
 	function server($CFG) {
 
 		$this->CFG = $CFG;
@@ -40,8 +38,6 @@ class server {
 		$allowed_directives = array(
 			"listen_addr"
 			,"listen_port"
-			,"max_conn"
-			,"max_conn_per_ip"
 		);
 
 		foreach(get_object_vars($CFG) as $var => $value) {
@@ -52,8 +48,6 @@ class server {
 	function init() {
 		$this->listen_addr = 0;
 		$this->listen_port = 21;
-		$this->max_conn = 10;
-		$this->max_conn_per_ip = 3;
 		$this->clientID = 'server';
 
 		$this->socket = false;
@@ -192,15 +186,8 @@ class server {
 			// add socket to client list and announce connection
 			$this->clients[$clientID] = new client($this->CFG, $conn, $clientID);
 
-			if (self::CHECK_CONNECTION_LIMITS) {
-				if ($msg = $this->check_connection_limits()) {
-					$this->disconnect_client($clientID, $msg);
-					return false;
-				}
-			}
-
 			/* start idle timer */
-			$this->timers['idle_time'] = $this->scheduler->startTimer($this->CFG->idle_time, $this, 'disconnect_client', $clientID);
+			$this->timers['idle_time'] = $this->scheduler->startTimer($this->CFG->idle_time, $this, 'disconnect_client', array($clientID, "421 client disconnected because of idle timeout (".$this->CFG->idle_time." seconds)"));
 
 			// everything is ok, initialize client
 			$this->clients[$clientID]->init();
@@ -224,25 +211,6 @@ class server {
 		$this->log->write("broadcast signal $signal to all childs...\n");
 		foreach ($this->pids as $pid => $bla) {
 			posix_kill($pid, $signal);
-		}
-	}
-
-	// XXX: doesn't work anymore
-	private function check_connection_limits() {
-		// if max_conn exceeded disconnect client
-		if (count($this->clients) > $this->max_conn) {
-			return "421 Maximum user count reached.";
-		}
-		// get a list of how many connections each IP has
-		$ip_pool = array();
-		foreach($this->clients as $client) {
-			$key = $client->addr;
-			$ip_pool[$key] = (array_key_exists($key, $ip_pool)) ? $ip_pool[$key] + 1 : 1;
-		}
-
-		// disconnect when max_conn_per_ip is exceeded for this client
-		if ($ip_pool[$key] > $this->max_conn_per_ip) {
-			return("421 Too many connections from this IP.");
 		}
 	}
 

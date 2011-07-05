@@ -385,7 +385,9 @@ class client {
 
 		foreach($this->io->ls() as $info) {
 			// formatted list output added by Phanatic 
-			$formatted_list = sprintf("%-11s%-2s%-15s%-15s%-10s%-13s\n".$info['name'], $info['perms'], "1", $info['owner'], $info['group'], $info['size'], $info['time']);
+
+			$formatted_list = sprintf("%-11s%-2s%-15s%-15s%-10s%-13s".$info['name'], $info['perms'], "1", $info['owner'], $info['group'], $info['size'], $info['time']);
+
 			
 			$this->data_send($formatted_list);
 			$this->data_eol();
@@ -690,6 +692,8 @@ class client {
 
 		$pool = &$this->CFG->pasv_pool;
 
+		socket_getsockname($this->connection, $local_addr);
+
 		if ($this->pasv) {
 			if (is_resource($this->data_conn)) socket_close($this->data_conn);
 			if (is_resource($this->data_socket)) socket_close($this->data_socket);
@@ -725,7 +729,7 @@ class client {
 			if (! $pool->exists($port)) {
 				$pool->add($port);
 
-				$c = @socket_bind($socket, $this->CFG->listen_addr, $port);
+				$c = @socket_bind($socket, $local_addr, $port);
 				if (!$c)
 					$this->log->write("socket_bind error: ".socket_strerror(socket_last_error($socket))."\n");
 				else {
@@ -751,7 +755,7 @@ class client {
 		$p1 = $port >>  8;
 		$p2 = $port & 0xff;
 
-		$tmp = str_replace(".", ",", $this->CFG->listen_addr);
+		$tmp = str_replace(".", ",", $local_addr);
 		$this->send("227 Entering Passive Mode ({$tmp},{$p1},{$p2}).");
 	}
 

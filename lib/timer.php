@@ -23,7 +23,7 @@ class Timer {
 
 	public function run() {
 		$func = $this->function;
-		$this->obj->$func($this->args);
+		return call_user_func_array(array($this->obj, $func), $this->args);
 	}
 
 	public function __destruct() {

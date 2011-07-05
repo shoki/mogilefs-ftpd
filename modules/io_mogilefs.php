@@ -15,10 +15,6 @@ class io_mogilefs {
 	protected $mogileClass;
 	protected $mogileClasses;
 	protected $fp;
-	protected $mogilefs_domain = 'default';
-	protected $mogilefs_tracker = 'vmtrack1';
-	protected $mogilefs_tracker_port = 7001;
-	protected $mogilefs_tracker_timeout = 3;
 
 	public function __construct($client) {
 		$this->client = $client;
@@ -32,20 +28,18 @@ class io_mogilefs {
 		if (is_object($this->store)) unset($this->store);
 	}
 
-	protected function MogileFSConnect() {
-		try {
-			if (!$this->mogilefs_domain || !$this->mogilefs_tracker || !$this->mogilefs_tracker_port ) throw new Exception("no mogilefs config set");
-
-			$this->store = new MogileFs();
-			$this->store->connect($this->mogilefs_tracker, $this->mogilefs_tracker_port, $this->mogilefs_domain, $this->mogilefs_tracker_timeout);
-		} catch (Exception $e) {
-			$this->msg("MogileFS Connect Error: ".$e->getMessage()."\n");
-			throw $e;
-		}
-		$this->getMogileClasses();
-	}
-
 	public function cwd() {
+		/* go to root */
+		if ($this->parameter === '/' || $this->parameter === '..') {
+			$this->cwd = '/';
+			return true;
+		}
+
+		$class = ltrim($this->parameter, '/') ;
+		if ($this->parameter[0] === '/' || $this->cwd === '/' && isset($this->mogileClasses[$class])) {
+			$this->cwd = '/'.$class.'/';
+			return true;
+		}
 		return false;
 	}
 
@@ -55,35 +49,16 @@ class io_mogilefs {
 
 	/* return mogile class when listing */
 	public function ls() {
-		return array();
-	}
-
-	protected function getMogileClasses() {
-		$ret = array();
-		try {
-			$domains = $this->store->getDomains(); 
-		} catch (Exception $e) {}
-		for ($x = 1; $x <= $domains['domains']; $x++) {
-			if ($domains['domain'.$x] == $this->mogilefs_domain) {
-				for ($y = 1; $y <= $domains['domain'.$x.'classes']; $y++) {
-					$this->mogileClasses[$domains['domain'.$x.'class'.$y.'name']] = true;
-					$info = array ('name' => $domains['domain'.$x.'class'.$y.'name'],
-								'size' => 0,
-								'owner' => 'root',
-								'group' => 'root',
-								'time' => 'Jul 12 12:00',
-								'perms' => 'drwxrwxrwx');
-					$ret[] = $info;
-				}
-			}
-		}
-		return $ret;
+		if ($this->cwd === '/') 
+			return $this->listMogileClasses();
+		else 
+			return $this->listMogileFiles();
 	}
 
 	public function rm($filename) {
 		$filename = $this->getFilename($filename);
 		try {
-			$this->delete($filename);
+			$this->store->delete($filename);
 			return true;
 		} catch (Exception $e) {
 			return false;
@@ -135,20 +110,6 @@ class io_mogilefs {
 		fwrite($this->fp, $str);
 	}
 
-	protected function getMogileClass($filename) {
-		$path = explode("/", $filename, 2);
-		/* when path doesn't seem to have any class in it, try to get it from
-		 * cwd */
-		if (count($path) > 1) {
-			/* check if class is valid */
-			if (isset($this->mogileClasses[$path[0]]))
-				return $path[0];
-			else 
-				return false;
-		} else 
-			return $this->cwd;
-	}
-
 	public function open($filename, $create = false, $append = false) {
 		if ($append) {
 			return false; /* not supported */
@@ -173,6 +134,111 @@ class io_mogilefs {
 		return ($this->fp = fopen($this->tmpfile, $mode));
 	}
 
+	public function close() {
+		if (is_resource($this->fp)) fclose($this->fp);
+		if ($this->saveonclose) {
+			$this->msg("put $this->tmpfile into mogile: ".$this->filename." class=".$this->getMogileClass($this->filename)."\n");
+			try {
+				$this->store->put($this->tmpfile, $this->filename, $this->getMogileClass($this->filename));
+			} catch (Exception $e) {
+				$this->msg("failed to put: ".$e->getMessage()."\n");
+				return false;
+			}
+		}
+		if (file_exists($this->tmpfile)) unlink($this->tmpfile);
+	}
+
+	protected function MogileFSConnect() {
+		try {
+			if (!$this->cfg->mogilefs->domain || !$this->cfg->mogilefs->tracker || !$this->cfg->mogilefs->port ) 
+				throw new Exception("no mogilefs config set");
+
+			$this->store = new MogileFs();
+			$this->store->connect($this->cfg->mogilefs->tracker, $this->cfg->mogilefs->port, $this->cfg->mogilefs->domain, $this->cfg->mogilefs->timeout);
+		} catch (Exception $e) {
+			$this->msg("MogileFS Connect Error: ".$e->getMessage()."\n");
+			throw $e;
+		}
+		$this->listMogileClasses();
+	}
+
+	protected function listMogileClasses() {
+		$ret = array();
+		try {
+			$domains = $this->store->getDomains(); 
+		} catch (Exception $e) {}
+		for ($x = 1; $x <= $domains['domains']; $x++) {
+			if ($domains['domain'.$x] == $this->cfg->mogilefs->domain) {
+				for ($y = 1; $y <= $domains['domain'.$x.'classes']; $y++) {
+					$this->mogileClasses[$domains['domain'.$x.'class'.$y.'name']] = true;
+					$info = array ('name' => $domains['domain'.$x.'class'.$y.'name'],
+								'size' => 0,
+								'owner' => 'mogilefs',
+								'group' => 'class',
+								'time' => 'Jul 12 12:00',
+								'perms' => 'drwxrwxrwx');
+					$ret[] = $info;
+				}
+			}
+		}
+		return $ret;
+	}
+
+	protected function listMogileFiles($list_limit = 1000, $view_limit = 1000) {
+		$files = array();
+		$next_after = null;
+		$lastKey = null;
+		$loops = 0;
+		$maxloops = 10;
+		do {
+			++$loops;
+			try {
+				$path = ltrim($this->cwd, '/');
+				$list = $this->store->listKeys($path, $next_after, $list_limit);
+
+				for ($x = 1; $x <= $list['key_count']; $x++) {
+					if (!isset($list['key_'.$x]) || empty($list['key_'.$x])) { 
+						continue;
+					}
+					$files[] = array ( 'name' => str_replace($path, '', $list['key_'.$x]),
+								'size' => 0,
+								'owner' => 'mogilefs',
+								'group' => 'file',
+								'time' => 'Jul 12 12:00',
+								'perms' => '-rwxrwxrwx');
+
+				}
+				/* if there is more to read, fire up another listKeys() */
+				$count = count($list) - 2;
+				if ($count == $list_limit && $count < $view_limit) {
+					$next_after = $list['next_after'];
+					$this->msg("read more after $next_after\n");
+				} else {
+					$next_after = null;
+					$this->msg("read finished\n");
+				}
+
+			} catch (Exception $e) {
+				$this->msg("listkeys Exception: ".$e->getMessage()."\n");
+			}
+		} while ($next_after && $loops < $maxloops);
+		return $files;
+	}
+
+	protected function getMogileClass($filename) {
+		$path = explode("/", $filename, 2);
+		/* when path doesn't seem to have any class in it, try to get it from
+		 * cwd */
+		if (count($path) > 1) {
+			/* check if class is valid */
+			if (isset($this->mogileClasses[$path[0]]))
+				return $path[0];
+			else 
+				return false;
+		} else 
+			return $this->cwd;
+	}
+
 	protected function getMeta($filename) {
 		//$this->msg("get meta for: ".$filename."\n");
 		/* get and cache metadata */
@@ -193,28 +259,6 @@ class io_mogilefs {
 		}
 	}
 
-	public function getLastError() {
-		return $this->lastError;
-	}
-
-	protected function msg($msg) {
-		$this->log->write(__CLASS__.": domain=".$this->mogilefs_domain." ".$msg);
-	}
-
-	public function close() {
-		if (is_resource($this->fp)) fclose($this->fp);
-		if ($this->saveonclose) {
-			$this->msg("put $this->tmpfile into mogile: ".$this->filename." class=".$this->getMogileClass($this->filename)."\n");
-			try {
-				$this->store->put($this->tmpfile, $this->filename, $this->getMogileClass($this->filename));
-			} catch (Exception $e) {
-				$this->msg("failed to put: ".$e->getMessage()."\n");
-				return false;
-			}
-		}
-		if (file_exists($this->tmpfile)) unlink($this->tmpfile);
-	}
-
 	public function validate_filename($filename) {
 		return true;
 	}
@@ -223,26 +267,29 @@ class io_mogilefs {
 	public function check_can_write($filename) {
 		return false;
 	}
+
 	public function check_can_read($filename) {
 		return false;
 	}
 
-	protected function delete($filename) {
-		try {
-			$this->store->delete($filename);
-			return true;
-		} catch (Exception $e) {
-			return false;
-		}
-	}
-	
 	public function getFilename($path) {
+		if ($this->cwd != '/') {
+			/* client navigated into mogilefs class by CWD */
+			return ltrim($this->cwd, '/').ltrim($path, '/');
+
+		} 
 		return $path;
 	}
 
-	public function getUserId($path) {
-		return $path;
+	public function getLastError() {
+		return $this->lastError;
 	}
+
+	protected function msg($msg) {
+		$this->log->write(__CLASS__.": domain=".$this->cfg->mogilefs->domain." ".$msg);
+	}
+
+
 }
 
 

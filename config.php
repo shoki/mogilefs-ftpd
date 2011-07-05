@@ -17,7 +17,7 @@
 error_reporting(E_ALL);
 set_time_limit(0);
 
-ini_set('include_path', get_include_path().":".dirname(__FILE__).":/www/kwick/lib");
+ini_set('include_path', get_include_path().":".dirname(__FILE__));
 
 class object{}
 $CFG = new object();
@@ -55,20 +55,24 @@ $CFG->text			= array();				// textfile-based user authentication -- see docs/REA
 $CFG->text['file']		= $CFG->rootdir."/users";		// path to file which holds user data
 $CFG->text['sep']		= ":";					// the character which separates the columns
 
+/* mogilefs tracker/domain settings */
+$CFG->mogilefs = new object;
+$CFG->mogilefs->tracker = 'vmtrack1';
+$CFG->mogilefs->port = 7001;
+$CFG->mogilefs->domain = 'blockoland';
+$CFG->mogilefs->timeout = 3;
 
-$CFG->listen_addr 		= "62.146.70.152";			// IP address where nanoFTPd should listen
-$CFG->listen_port 		= 21;					// port where nanoFTPd should listen
+$CFG->listen_addr 		= "0.0.0.0";			// IP address where nanoFTPd should listen
+$CFG->listen_port 		= 2121;					// port where nanoFTPd should listen
 $CFG->low_port			= 15000;
 $CFG->high_port			= 25000;
-$CFG->max_conn			= 10;					// max number of connections allowed
-$CFG->max_conn_per_ip	= 3;						// max number of connections per ip allowed
 $CFG->idle_time		= 60;					// close conn after this amount of seconds when inactive
 $CFG->io			= "mogilefs";				// io module (default: file) -- note: ips doesn't work
-$CFG->server_name 		= "nanoFTPd server [APA mogilified]";		// nanoFTPd server name
+$CFG->server_name 		= "nanoFTPd server [OMFG]";		// nanoFTPd server name
 
 $CFG->dynip			= array();				// dynamic ip support -- see docs/REAME.dynip
-$CFG->dynip['on']		= 0;					// 0 = off (use listen_addr directive) 1 = on (override listen_addr directive)
-$CFG->dynip['iface']	= "ppp0";					// interface connecting to the internet
+$CFG->dynip['on']		= false;					// 0 = off (use listen_addr directive) 1 = on (override listen_addr directive)
+$CFG->dynip['iface']	= "eth0";					// interface connecting to the internet
 
 $CFG->logging = new object;
 $CFG->logging->mode		= 1;					// 0 = no logging, 1 = to file (see directive below), 2 = to console, 3 = both

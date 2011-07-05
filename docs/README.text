@@ -6,16 +6,13 @@ will do it as well...
 
 structure:
 ---
-username1:password1:uid1:gid1
-username2:password2:uid2:gid2
-...
-usernamen:passwordn:uidn:gidn
+usernamen:passwordn:uidn:gidn:io_module
 ---
 
 exapmple:
 ---
-phanatic:password:1000:1000
-anonymous:anonymous:0:0
+phanatic:password:1000:1000:mogilefs
+anonymous:anonymous:0:0:file
 ---
 
 config.php editing:
