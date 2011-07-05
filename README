@@ -46,3 +46,5 @@ won't work.
 4. PHP error logs go to log/nanoftpd.err. Application logs go to
 log/nanoftpd.log
 
+5. password for the shipped test user in users text database is 'test'. 
+
