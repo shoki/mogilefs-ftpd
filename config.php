@@ -36,7 +36,6 @@ $CFG->table['password']		= "password";				// name of password field
 $CFG->table['uid']		= "uid";				// name of uid field
 $CFG->table['gid']		= "gid";				// name of gid field
 
-
 $CFG->crypt			= "md5";				// password encryption method ("plain" or "md5")
 
 $CFG->rootdir 			= dirname(__FILE__);		// nanoFTPd root directory
@@ -63,7 +62,7 @@ $CFG->mogilefs->domain = 'blockoland';
 $CFG->mogilefs->timeout = 3;
 
 $CFG->listen_addr 		= "0.0.0.0";			// IP address where nanoFTPd should listen
-$CFG->listen_port 		= 2121;					// port where nanoFTPd should listen
+$CFG->listen_port 		= 21;					// port where nanoFTPd should listen
 $CFG->low_port			= 15000;
 $CFG->high_port			= 25000;
 $CFG->idle_time		= 60;					// close conn after this amount of seconds when inactive

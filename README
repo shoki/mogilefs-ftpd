@@ -43,3 +43,6 @@ supports using custom IO modules for any user.
 using this convention you can still use this module but the listing feature
 won't work.
 
+4. PHP error logs go to log/nanoftpd.err. Application logs go to
+log/nanoftpd.log
+
