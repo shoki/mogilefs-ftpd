@@ -292,7 +292,7 @@ class io_mogilefs {
 	}
 
 	protected function getMeta($filename) {
-		$this->msg("get meta for: ".$filename."\n");
+		//$this->msg("get meta for: ".$filename."\n");
 		/* get and cache metadata */
 		if (isset($this->metaCache[$filename])) return $this->metaCache[$filename];
 		try {
