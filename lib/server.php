@@ -71,13 +71,8 @@ class server {
 			$this->socket_error();
 
 		// bind listening socket to specific address/port 
-		if ($this->CFG->dynip['on']) {
-		    if (! @socket_bind($this->socket, $this->get_ip_address(), $this->listen_port))
+		if (! @socket_bind($this->socket, $this->listen_addr, $this->listen_port))
 			$this->socket_error();
-		} else {
-		    if (! @socket_bind($this->socket, $this->listen_addr, $this->listen_port))
-			$this->socket_error();
-		}
 
 		// listen on listening socket
 		if (! socket_listen($this->socket))
@@ -248,12 +243,6 @@ class server {
 	    die;
 	}
 	
-	function get_ip_address() {
-	    exec("ifconfig | grep -1 ".$this->CFG->dynip['iface']." | cut -s -d ' ' -f12 | grep addr | cut -d ':' -f2", $output, $return);
-	    if ($return != "0") die("couldn't get ip address... maybe you should turn off the dynamic ip detection feature...\n");
-	    return rtrim($output[0]);
-	}
-
 	protected function setProcTitle($str) {
 		if (function_exists("setproctitle")) setproctitle($str);
 	}

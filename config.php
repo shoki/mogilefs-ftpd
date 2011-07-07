@@ -62,10 +62,6 @@ $CFG->idle_time		= 300;					// close conn after this amount of seconds when inac
 $CFG->io			= "mogilefs";				// io module (default: file) -- note: ips doesn't work
 $CFG->server_name 		= "nanoFTPd server [OMFG]";		// nanoFTPd server name
 
-$CFG->dynip			= array();				// dynamic ip support -- see docs/REAME.dynip
-$CFG->dynip['on']		= false;					// 0 = off (use listen_addr directive) 1 = on (override listen_addr directive)
-$CFG->dynip['iface']	= "eth0";					// interface connecting to the internet
-
 $CFG->logging = new stdClass();
 $CFG->logging->mode		= 1;					// 0 = no logging, 1 = to file (see directive below), 2 = to console, 3 = both
 $CFG->logging->file		= "$CFG->rootdir/log/nanoftpd.log";	// the file where nanoFTPd should log the accesses & errors

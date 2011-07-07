@@ -192,33 +192,7 @@ class client {
 	NOTE: -
 	*/
 	function cmd_help() {
-		$this->send(
-			"214-" . $this->CFG->server_name . "\n"
-			."214-Commands available:\n"
-			."214-APPE\n"
-			."214-CDUP\n"
-			."214-CWD\n"
-			."214-DELE\n"
-			."214-HELP\n"
-			."214-LIST\n"
-			."214-MKD\n"
-			."214-NOOP\n"
-			."214-PASS\n"
-			."214-PASV\n"
-			."214-PORT\n"
-			."214-PWD\n"
-			."214-QUIT\n"
-			."214-RETR\n"
-			."214-RMD\n"
-			."214-RNFR\n"
-			."214-RNTO\n"
-			."214-SIZE\n"
-			."214-STOR\n"
-			."214-SYST\n"
-			."214-TYPE\n"
-			."214-USER\n"
-			."214 HELP command successful."
-		);
+		$this->send($this->io->help());
 	}
 
 	/*

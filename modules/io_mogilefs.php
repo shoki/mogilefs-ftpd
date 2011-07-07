@@ -21,7 +21,7 @@ class io_mogilefs {
 		$this->cfg = $client->CFG;
 		$this->log = &$this->cfg->log;
 		$this->root = "";
-		$this->MogileFSConnect();
+		$this->connectMogile();
 	}
 
 	public function __destruct() {
@@ -47,7 +47,7 @@ class io_mogilefs {
 		return $this->cwd;
 	}
 
-	/* return mogile class when listing */
+	/* return mogile class when listing root and files when outside */
 	public function ls() {
 		if ($this->cwd === '/') 
 			return $this->listMogileClasses();
@@ -68,7 +68,10 @@ class io_mogilefs {
 	public function size($filename) {
 		$filename = $this->getFilename($filename);
 		$meta = $this->getMeta($filename);
-		return $meta['info']['length']; 
+		if ($meta !== false)
+			return $meta['info']['length']; 
+		else
+			return 0;
 	}
 
 	public function exists($filename) {
@@ -151,15 +154,21 @@ class io_mogilefs {
 			$this->filename = $filename;
 		} else {
 			$mode = "r";
-			try {
-				$meta = $this->getMeta($filename);
-				$content = file_get_contents($meta['path']['path1']);
-				if (empty($content))
-					throw new Exception("could not retrieve file");
 
-				file_put_contents($this->tmpfile, $content);
-			} catch (Exception $e) {
-				$this->lastError = $e->getMessage();
+			$meta = $this->getMeta($filename);
+			if ($meta === false) {
+				$this->lastError = "failed to get meta data";
+				return false;
+			}
+
+			$content = file_get_contents($meta['path']['path1']);
+			if (!$content) {
+				$this->lastError = "failed to get from mogilefs";
+				return false;
+			}
+
+			if (!file_put_contents($this->tmpfile, $content)) {
+				$this->lastError = "could not write temp file";
 				return false;
 			}
 		}
@@ -184,7 +193,7 @@ class io_mogilefs {
 		return $ret;
 	}
 
-	protected function MogileFSConnect() {
+	protected function connectMogile() {
 		try {
 			if (!$this->cfg->mogilefs->domain || !$this->cfg->mogilefs->tracker || !$this->cfg->mogilefs->port ) 
 				throw new Exception("no mogilefs config set");
@@ -249,7 +258,8 @@ class io_mogilefs {
 					$size = 0;
 					if ($this->cfg->mogilefs->extendedlist) {
 						$meta = $this->getMeta($list['key_'.$x]);
-						$size = $meta['info']['length'];
+						if ($meta !== false)
+							$size = $meta['info']['length'];
 					}
 
 					$files[] = array ( 'name' => str_replace($path, '', $list['key_'.$x]),
@@ -301,7 +311,6 @@ class io_mogilefs {
 			return $this->metaCache[$filename];
 		} catch (Exception $e) {
 			$this->msg("get meta failed: ".$e->getMessage()."\n");
-			$this->lastError = $e->getMessage();
 			return false;
 		}
 	}
@@ -336,6 +345,34 @@ class io_mogilefs {
 		$this->log->write(__CLASS__.": domain=".$this->cfg->mogilefs->domain." ".$msg);
 	}
 
+	public function help() {
+			return(
+			"214-" . $this->cfg->server_name . "\n"
+			."214-Commands available:\n"
+			."214-CDUP\n"
+			."214-CWD\n"
+			."214-DELE\n"
+			."214-HELP\n"
+			."214-LIST\n"
+			."214-MKD\n"
+			."214-NOOP\n"
+			."214-PASS\n"
+			."214-PASV\n"
+			."214-PORT\n"
+			."214-PWD\n"
+			."214-QUIT\n"
+			."214-RETR\n"
+			."214-RMD\n"
+			."214-RNFR\n"
+			."214-RNTO\n"
+			."214-SIZE\n"
+			."214-STOR\n"
+			."214-SYST\n"
+			."214-TYPE\n"
+			."214-USER\n"
+			."214 HELP command successful."
+		);
+	}
 
 }
 
