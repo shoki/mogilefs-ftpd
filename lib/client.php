@@ -842,53 +842,7 @@ class client {
 	NOTE: chmod feature built in by Phanatic (01/01/2003)
 	*/
 	function cmd_site() {
-	
-	    $p = explode(" ", $this->parameter);
-	
-	    switch (strtolower($p[0])) {
-			case "uid":
-			    $this->send("214 UserID: ".$this->user_uid);
-		    	break;
-			case "gid":
-			    $this->send("214 GroupID: ".$this->user_gid);
-			    break;
-			case "chmod":
-			    if (!isset($p[1]) || !isset($p[2])) {
-				$this->send("214 Not enough parameters. Usage: SITE CHMOD <mod> <filename>.");
-			    } else {
-				if (strpos($p[2], "..") !== false) {
-				    $this->send("550 Permission denied.");
-				    return;
-				}
-			    
-				if (substr($p[2], 0, 1) == "/") {
-				    $file = $this->io->root.$p[2];
-				} else {
-				    $file = $this->io->root.$this->io->cwd.$p[2];
-				}
-				if (!$this->io->exists($p[2])) {
-				    $this->send("550 File or directory doesn't exist.");
-				    return;
-				}
-				
-				if (!$this->auth->can_write($file)) {
-				    $this->send("550 Permission denied.");
-				} else {
-				    $p[1] = escapeshellarg($p[1]);
-				    $file = escapeshellarg($file);
-				    exec("chmod ".$p[1]." ".$file, $output, $return);
-				    if ($return != 0) {
-					$this->send("550 Command failed.");
-				    } else {
-					$this->send("200 SITE CHMOD command successful.");
-				    }
-				}
-			    }
-			    break;
-	
-			default:
-			    $this->send("502 Command not implemented.");
-	    }
+		$this->send($this->io->site($this->parameter));
 	}
 
 	function data_open() {

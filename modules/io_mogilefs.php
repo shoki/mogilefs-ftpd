@@ -52,7 +52,7 @@ class io_mogilefs {
 		if ($this->cwd === '/') 
 			return $this->listMogileClasses();
 		else 
-			return $this->listMogileFiles($this->parameter);
+			return $this->listMogileFiles($this->parameter, $this->cfg->mogilefs->listlimit);
 	}
 
 	public function rm($filename) {
@@ -88,15 +88,44 @@ class io_mogilefs {
 	}
 	
 	public function md($dir) {
-		return false; 
+		if (!$this->cfg->mogilefs->canmkdir) return false;
+
+		try {
+			$this->store->createClass($this->cfg->mogilefs->domain, $this->getFilename($dir), $this->cfg->mogilefs->mindevcount);
+			return true;
+		} catch (Exception $e) {
+			$this->msg("createClass failed: ".$e->getMessage()."\n");
+			return false;
+		}
 	}
 	
 	public function rd($dir) {
-		return false; 
+		if (!$this->cfg->mogilefs->canrmdir) return false;
+
+		try {
+			$this->store->deleteClass($this->cfg->mogilefs->domain, $this->getFilename($dir));
+			return true;
+		} catch (Exception $e) {
+			$this->msg("deleteClass failed: ".$e->getMessage()."\n");
+			return false;
+		}
 	}
 
 	public function rn($from, $to) {
-		return false;
+		if (!$this->cfg->mogilefs->canrename) return false;
+
+		try {
+			$this->store->rename($this->getFilename($from), $this->getFilename($to));
+			return true;
+		} catch (Exception $e) {
+			$this->msg("rename failed: ".$e->getMessage()."\n");
+			return false;
+		}
+	}
+
+	public function site($params) {
+		// have no SITE support now
+		return "502 Command not implemented.";
 	}
 
 	public function read($size) {
@@ -138,17 +167,21 @@ class io_mogilefs {
 	}
 
 	public function close() {
+		$ret = false;
 		if (is_resource($this->fp)) fclose($this->fp);
 		if ($this->saveonclose) {
 			$this->msg("put $this->tmpfile into mogile: ".$this->filename." class=".$this->getMogileClass($this->filename)."\n");
 			try {
 				$this->store->put($this->tmpfile, $this->filename, $this->getMogileClass($this->filename));
+				$this->filename = '';
+				$this->saveonclose = false;
+				$ret = true;
 			} catch (Exception $e) {
 				$this->msg("failed to put: ".$e->getMessage()."\n");
-				return false;
 			}
 		}
 		if (file_exists($this->tmpfile)) unlink($this->tmpfile);
+		return $ret;
 	}
 
 	protected function MogileFSConnect() {
@@ -169,7 +202,10 @@ class io_mogilefs {
 		$ret = array();
 		try {
 			$domains = $this->store->getDomains(); 
-		} catch (Exception $e) {}
+		} catch (Exception $e) {
+			$this->msg("MogileFS getDomains Error: ".$e->getMessage()."\n");
+			return $ret;
+		}
 		for ($x = 1; $x <= $domains['domains']; $x++) {
 			if ($domains['domain'.$x] == $this->cfg->mogilefs->domain) {
 				for ($y = 1; $y <= $domains['domain'.$x.'classes']; $y++) {
@@ -256,7 +292,7 @@ class io_mogilefs {
 	}
 
 	protected function getMeta($filename) {
-		//$this->msg("get meta for: ".$filename."\n");
+		$this->msg("get meta for: ".$filename."\n");
 		/* get and cache metadata */
 		if (isset($this->metaCache[$filename])) return $this->metaCache[$filename];
 		try {
@@ -284,12 +320,12 @@ class io_mogilefs {
 	}
 
 	public function getFilename($path) {
-		if ($this->cwd != '/') {
+		if ($this->cwd != '/' && $path[0] !== '/') {
 			/* client navigated into mogilefs class by CWD */
 			return ltrim($this->cwd, '/').ltrim($path, '/');
 
 		} 
-		return $path;
+		return ltrim($path, '/');
 	}
 
 	public function getLastError() {

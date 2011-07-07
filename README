@@ -48,18 +48,46 @@ log/nanoftpd.log
 
 5. password for the shipped test user in users text database is 'test'.
 
-6. when listing files in classes there is a default limit of 1000 entries.
-If you have a large MogileFS class it doesn't really makes sense to list
-millions of files (tough it is possible if you adjust the limit).
+6. when listing files in classes there is a limit for the list.  If you have 
+a large MogileFS class it doesn't really makes sense to list millions of 
+files (tough it is possible if you adjust the listlimit).
+
+7. MKD command can create MogileFS classes and RMD can delete them. 
+
+8. you can even rename files in MogileFS using the RNFR RNTO commands.
 
 Configuration
 =============
 adjust values in config.php and start the deamon. 
 
+mogilefs->listlimit = 1000;
+limit of the list returned by LIST command. Set as low as possible for best
+performance. :)
+
 mogilefs->extendedlist = true;
 this will enable meta data lookup for every file in the LIST output. If you
-don't need the file length in the output, let this off to avoid lookups.
+don't need the file length in the output, let this off to avoid lookups and
+speed up listing.
 
 mogilefs->searchlist = true;
 allow you to search mogilefs files via LIST <search prefix>. So LIST test will
 search for any files matching <class>/test*.
+
+mogilefs->canrename = true;	
+allow rename commands to be translated into MogileFS commands. 
+
+mogilefs->canmkdir = true;
+on mkdir command create a MogileFS class with the given directory name.
+
+mogielfs->canrmdir = true;
+on rmdir command delete a MogileFS class with the given directory name. 
+
+mogilefs->mindevcount = 2;
+mindevcount parameter for creating MogileFS classes.
+
+Compatibility
+=============
+Used to work with:
+* PHP FTP extension of PHP 5.2.6 
+* FileZilla on Ubuntu
+* Cyberduck Version 4.0.2 (8601) on MacOS X
