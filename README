@@ -11,7 +11,7 @@ The original nanoftpd version has been modified to be multi process capable
 and some unmaintained code has been removed.
 
 This is production safe quality software and we used it several month while
-migrating to MogileFS. 
+migrating to MogileFS.
 
 Author: Andre Pascha <bender@duese.org>
 
@@ -22,10 +22,10 @@ Phanatic <linux@psoftwares.hu>
 Installation
 ============
 You need at least PHP 5.2.6 and these PHP extensions to run mogilefs-ftpd:
- 
+
 * sockets
 * pcntl
-* PECL MogileFS (http://projects.usrportage.de/index.fcgi/php-mogilefs)
+* PECL MogileFS (https://pecl.php.net/mogilefs)
 * PECL proctitle (optional)
 
 There is a logrotate config and a init script available in the contrib
@@ -37,7 +37,7 @@ Hints
 don't know if they work.
 
 2. i use the ftp daemon with the text database authentication which also
-supports using custom IO modules for any user. 
+supports using custom IO modules for any user.
 
 3. path convention is <mogilefs class>/<filename>. If your mogilefs is not
 using this convention you can still use this module but the listing feature
@@ -46,5 +46,4 @@ won't work.
 4. PHP error logs go to log/nanoftpd.err. Application logs go to
 log/nanoftpd.log
 
-5. password for the shipped test user in users text database is 'test'. 
-
+5. password for the shipped test user in users text database is 'test'.
