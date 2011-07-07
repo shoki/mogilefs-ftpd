@@ -27,16 +27,6 @@ class NanoFTP_Daemon extends Daemon {
 	public function __construct() {
 		global $CFG;
 
-		if (!extension_loaded('sockets')) dl('sockets.so');
-		if (!extension_loaded('pcntl')) dl('pcntl.so');
-
-		/* make sure we are not handling all strings as UTF8. binary files are
-		 * not utf8 encoded and will be broken when using strlen() to get file
-		 * size */
-		if (ini_get('mbstring.func_overload') & 2) {
-			mb_internal_encoding('latin1');
-		}
-
 		$this->pidFileLocation = $CFG->pidfile;
 		$this->userID = $CFG->userid;
 		$this->groupID = $CFG->groupid;
@@ -82,6 +72,16 @@ class NanoFTP_Daemon extends Daemon {
 		if (is_object($this->server) && is_object($this->server->log)) $this->server->log->write($msg."\n");
 		else error_log($msg);
 	}
+}
+
+if (!extension_loaded('sockets')) dl('sockets.so');
+if (!extension_loaded('pcntl')) dl('pcntl.so');
+
+/* make sure we are not handling all strings as UTF8. binary files are
+ * not utf8 encoded and will be broken when using strlen() to get file
+ * size */
+if (ini_get('mbstring.func_overload') & 2) {
+	mb_internal_encoding('latin1');
 }
 
 if ($CFG->daemonize) {

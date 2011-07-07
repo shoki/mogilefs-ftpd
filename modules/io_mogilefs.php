@@ -52,7 +52,7 @@ class io_mogilefs {
 		if ($this->cwd === '/') 
 			return $this->listMogileClasses();
 		else 
-			return $this->listMogileFiles();
+			return $this->listMogileFiles($this->parameter);
 	}
 
 	public function rm($filename) {
@@ -68,8 +68,7 @@ class io_mogilefs {
 	public function size($filename) {
 		$filename = $this->getFilename($filename);
 		$meta = $this->getMeta($filename);
-		$size = strlen($meta['content']);
-		return $size; 
+		return $meta['info']['length']; 
 	}
 
 	public function exists($filename) {
@@ -125,7 +124,11 @@ class io_mogilefs {
 			$mode = "r";
 			try {
 				$meta = $this->getMeta($filename);
-				file_put_contents($this->tmpfile, $meta['content']);
+				$content = file_get_contents($meta['path']['path1']);
+				if (empty($content))
+					throw new Exception("could not retrieve file");
+
+				file_put_contents($this->tmpfile, $content);
 			} catch (Exception $e) {
 				$this->lastError = $e->getMessage();
 				return false;
@@ -184,24 +187,37 @@ class io_mogilefs {
 		return $ret;
 	}
 
-	protected function listMogileFiles($list_limit = 1000, $view_limit = 1000) {
+	protected function listMogileFiles($prefix = '', $view_limit = 1000) {
 		$files = array();
 		$next_after = null;
 		$lastKey = null;
+		$list_limit = 1000; 	/* internal mogilefs listKeys limit */
 		$loops = 0;
 		$maxloops = 10;
 		do {
 			++$loops;
 			try {
 				$path = ltrim($this->cwd, '/');
-				$list = $this->store->listKeys($path, $next_after, $list_limit);
+				if ($this->cfg->mogilefs->searchlist)
+					$key = $path.$prefix;
+				else
+					$key = $path;
+
+				$list = $this->store->listKeys($key, $next_after, $list_limit);
 
 				for ($x = 1; $x <= $list['key_count']; $x++) {
 					if (!isset($list['key_'.$x]) || empty($list['key_'.$x])) { 
 						continue;
 					}
+
+					$size = 0;
+					if ($this->cfg->mogilefs->extendedlist) {
+						$meta = $this->getMeta($list['key_'.$x]);
+						$size = $meta['info']['length'];
+					}
+
 					$files[] = array ( 'name' => str_replace($path, '', $list['key_'.$x]),
-								'size' => 0,
+								'size' => $size,
 								'owner' => 'mogilefs',
 								'group' => 'file',
 								'time' => 'Jul 12 12:00',
@@ -243,14 +259,9 @@ class io_mogilefs {
 		//$this->msg("get meta for: ".$filename."\n");
 		/* get and cache metadata */
 		if (isset($this->metaCache[$filename])) return $this->metaCache[$filename];
-		//$this->msg("get meta for: ".$filename." not cached"."\n");
 		try {
 			$this->metaCache[$filename]['path'] = $meta = $this->store->get($filename);
-			$this->msg("get file from mogile: ".$meta["path1"]."\n");
-			$content = file_get_contents($meta['path1']);
-			if (empty($content))
-				throw new Exception("could not retrieve file");
-			$this->metaCache[$filename]['content'] = $content;
+			$this->metaCache[$filename]['info'] = $this->store->fileInfo($filename);
 			return $this->metaCache[$filename];
 		} catch (Exception $e) {
 			$this->msg("get meta failed: ".$e->getMessage()."\n");

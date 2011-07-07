@@ -51,3 +51,15 @@ log/nanoftpd.log
 6. when listing files in classes there is a default limit of 1000 entries.
 If you have a large MogileFS class it doesn't really makes sense to list
 millions of files (tough it is possible if you adjust the limit).
+
+Configuration
+=============
+adjust values in config.php and start the deamon. 
+
+mogilefs->extendedlist = true;
+this will enable meta data lookup for every file in the LIST output. If you
+don't need the file length in the output, let this off to avoid lookups.
+
+mogilefs->searchlist = true;
+allow you to search mogilefs files via LIST <search prefix>. So LIST test will
+search for any files matching <class>/test*.
