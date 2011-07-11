@@ -4,7 +4,7 @@
  FTP to MogileFS translation layer
 */
 
-class io_mogilefs {
+class io_mogilefs implements io_interface {
 	public $parameter;
 	public $root;
 	public $cwd = '/';
@@ -14,29 +14,36 @@ class io_mogilefs {
 	protected $metaCache = array();
 	protected $mogileClass;
 	protected $mogileClasses;
+	protected $mogileDomains;
 	protected $fp;
 
 	public function __construct($client) {
 		$this->client = $client;
 		$this->cfg = $client->CFG;
-		$this->log = &$this->cfg->log;
+		$this->log = $this->cfg->log;
 		$this->root = "";
-		$this->connectMogile();
 	}
 
 	public function __destruct() {
 		if (is_object($this->store)) unset($this->store);
 	}
 
-	public function cwd() {
+	public function init() {
+		$this->connectMogile($this->cfg->mogilefs->tracker,
+				$this->cfg->mogilefs->port, $this->cfg->mogilefs->domain,
+				$this->cfg->mogilefs->timeout);
+		$this->listMogileClasses();
+	}
+
+	public function cwd($dir) {
 		/* go to root */
-		if ($this->parameter === '/' || $this->parameter === '..') {
+		if ($dir === '/' || $dir === '..') {
 			$this->cwd = '/';
 			return true;
 		}
 
-		$class = ltrim($this->parameter, '/') ;
-		if ($this->parameter[0] === '/' || $this->cwd === '/' && isset($this->mogileClasses[$class])) {
+		$class = ltrim($dir, '/') ;
+		if ($dir[0] === '/' || $this->cwd === '/' && isset($this->mogileClasses[$class])) {
 			$this->cwd = '/'.$class.'/';
 			return true;
 		}
@@ -48,11 +55,14 @@ class io_mogilefs {
 	}
 
 	/* return mogile class when listing root and files when outside */
-	public function ls() {
-		if ($this->cwd === '/') 
+	public function ls($dir) {
+		if ($this->cwd === '/')  {
 			return $this->listMogileClasses();
-		else 
-			return $this->listMogileFiles($this->parameter, $this->cfg->mogilefs->listlimit);
+		} else 
+			$path = ltrim($this->cwd, '/');
+			if ($this->cfg->mogilefs->searchlist)
+				$path .= '/'.$dir;
+			return $this->listMogileFiles($path, $this->cfg->mogilefs->listlimit);
 	}
 
 	public function rm($filename) {
@@ -193,18 +203,14 @@ class io_mogilefs {
 		return $ret;
 	}
 
-	protected function connectMogile() {
+	protected function connectMogile($tracker, $port, $domain, $timeout) {
 		try {
-			if (!$this->cfg->mogilefs->domain || !$this->cfg->mogilefs->tracker || !$this->cfg->mogilefs->port ) 
-				throw new Exception("no mogilefs config set");
-
 			$this->store = new MogileFs();
-			$this->store->connect($this->cfg->mogilefs->tracker, $this->cfg->mogilefs->port, $this->cfg->mogilefs->domain, $this->cfg->mogilefs->timeout);
+			$this->store->connect($tracker, $port, $domain, $timeout);
 		} catch (Exception $e) {
 			$this->msg("MogileFS Connect Error: ".$e->getMessage()."\n");
 			throw $e;
 		}
-		$this->listMogileClasses();
 	}
 
 	protected function listMogileClasses() {
@@ -216,6 +222,7 @@ class io_mogilefs {
 			return $ret;
 		}
 		for ($x = 1; $x <= $domains['domains']; $x++) {
+			$this->mogileDomains[$domains['domain'.$x]] = true;
 			if ($domains['domain'.$x] == $this->cfg->mogilefs->domain) {
 				for ($y = 1; $y <= $domains['domain'.$x.'classes']; $y++) {
 					$this->mogileClasses[$domains['domain'.$x.'class'.$y.'name']] = true;
@@ -232,22 +239,16 @@ class io_mogilefs {
 		return $ret;
 	}
 
-	protected function listMogileFiles($prefix = '', $view_limit = 1000) {
+	protected function listMogileFiles($key = '', $view_limit = 1000) {
 		$files = array();
 		$next_after = null;
 		$lastKey = null;
 		$list_limit = 1000; 	/* internal mogilefs listKeys limit */
 		$loops = 0;
-		$maxloops = 10;
+		$maxloops = 100;
 		do {
 			++$loops;
 			try {
-				$path = ltrim($this->cwd, '/');
-				if ($this->cfg->mogilefs->searchlist)
-					$key = $path.$prefix;
-				else
-					$key = $path;
-
 				$list = $this->store->listKeys($key, $next_after, $list_limit);
 
 				for ($x = 1; $x <= $list['key_count']; $x++) {
@@ -262,7 +263,7 @@ class io_mogilefs {
 							$size = $meta['info']['length'];
 					}
 
-					$files[] = array ( 'name' => str_replace($path, '', $list['key_'.$x]),
+					$files[] = array ( 'name' => str_replace($key, '', $list['key_'.$x]),
 								'size' => $size,
 								'owner' => 'mogilefs',
 								'group' => 'file',
@@ -277,7 +278,6 @@ class io_mogilefs {
 					$this->msg("read more after $next_after\n");
 				} else {
 					$next_after = null;
-					$this->msg("read finished\n");
 				}
 
 			} catch (Exception $e) {
@@ -320,15 +320,16 @@ class io_mogilefs {
 	}
 
 	/* don't check permissions */
-	public function check_can_write($filename) {
-		return false;
+	public function canWrite($filename) {
+		return true;
 	}
 
-	public function check_can_read($filename) {
-		return false;
+	public function canRead($filename) {
+		return true;
 	}
 
 	public function getFilename($path) {
+	$this->msg($path."\n");
 		if ($this->cwd != '/' && $path[0] !== '/') {
 			/* client navigated into mogilefs class by CWD */
 			return ltrim($this->cwd, '/').ltrim($path, '/');

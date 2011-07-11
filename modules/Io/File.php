@@ -14,7 +14,7 @@
 ****************************************************
 */
 
-class io_file {
+class io_file implements io_interface {
 
 	var $parameter;
 	var $root;
@@ -263,67 +263,65 @@ class io_file {
 	}
 
 	/* allow checking permissions */
-	public function check_can_write($filename) {
-		return true;
+	public function canWrite($filename) {
+		return is_writable($filename);
 	}
-	public function check_can_read($filename) {
-		return true;
+	public function canRead($filename) {
+		return is_readable($filename);
 	}
-	// XXX
+
 	public function site($params) {
 	
 	    $p = explode(" ", $params);
 	
 	    switch (strtolower($p[0])) {
 			case "uid":
-			    $this->send("214 UserID: ".$this->user_uid);
+			    $message = "214 UserID: ".$this->client->auth->getUserid();
 		    	break;
 			case "gid":
-			    $this->send("214 GroupID: ".$this->user_gid);
+			    $message = "214 GroupID: ".$this->client->auth->getGroupid();
 			    break;
 			case "chmod":
 			    if (!isset($p[1]) || !isset($p[2])) {
-				$this->send("214 Not enough parameters. Usage: SITE CHMOD <mod> <filename>.");
+					$message = "214 Not enough parameters. Usage: SITE CHMOD <mod> <filename>.";
+					return;
 			    } else {
-				if (strpos($p[2], "..") !== false) {
-				    $this->send("550 Permission denied.");
-				    return;
-				}
+					if (strpos($p[2], "..") !== false) {
+						$message = "550 Permission denied.";
+						return;
+					}
 			    
-				if (substr($p[2], 0, 1) == "/") {
-				    $file = $this->io->root.$p[2];
-				} else {
-				    $file = $this->io->root.$this->io->cwd.$p[2];
+					if (substr($p[2], 0, 1) == "/") {
+						$file = $this->root.$p[2];
+					} else {
+						$file = $this->root.$this->cwd.$p[2];
+					}
+					if (!$this->exists($p[2])) {
+						$message = "550 File or directory doesn't exist.";
+						return;
+					}
+
+					if (!$this->canWrite($file)) {
+						$message = "550 Permission denied.";
+					} else {
+						if (!chmod($file, $p[1])) {
+							$message = "550 Command failed.";
+						} else {
+							$message = "200 SITE CHMOD command successful.";
+						}
+					}
 				}
-				if (!$this->io->exists($p[2])) {
-				    $this->send("550 File or directory doesn't exist.");
-				    return;
-				}
-				
-				if (!$this->auth->can_write($file)) {
-				    $this->send("550 Permission denied.");
-				} else {
-				    $p[1] = escapeshellarg($p[1]);
-				    $file = escapeshellarg($file);
-				    exec("chmod ".$p[1]." ".$file, $output, $return);
-				    if ($return != 0) {
-					$this->send("550 Command failed.");
-				    } else {
-					$this->send("200 SITE CHMOD command successful.");
-				    }
-				}
-			    }
-			    break;
+				break;
 	
 			default:
-			    $this->send("502 Command not implemented.");
+			    $message = "502 Command not implemented.";
 	    }
 		return $message;
 	}
 
 	public function help() {
 			return(
-			"214-" . $this->cfg->server_name . "\n"
+			"214-" . $this->client->CFG->server_name . "\n"
 			."214-Commands available:\n"
 			."214-APPE\n"
 			."214-CDUP\n"
