@@ -329,7 +329,6 @@ class Io_MogileFs implements Io_Interface {
 	}
 
 	public function getFilename($path) {
-	$this->msg($path."\n");
 		if ($this->cwd != '/' && $path[0] !== '/') {
 			/* client navigated into mogilefs class by CWD */
 			return ltrim($this->cwd, '/').ltrim($path, '/');

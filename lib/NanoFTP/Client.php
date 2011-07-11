@@ -180,7 +180,7 @@ class NanoFTP_Client {
 
 	public function disconnect($reason = null) {
 		if ($reason)
-			$c->send($reason);
+			$this->send($reason);
 
 		if (is_resource($this->connection)) socket_close($this->connection);
 

@@ -19,22 +19,32 @@ class Io_MogileFs_DomainNS extends Io_MogileFs {
 
 	}
 
+	/* try to hide first path level which represents the mogilefs domain */
 	public function cwd($dir) {
-		if ($dir === '/') {
+		$path = explode('/', $dir, 3);
+		if ($dir === '/' || ($this->cwd === '/' && $dir === '..')) {
 			$this->realcwd = '/';
 		}
-		$path = explode('/', $dir, 2);
-		$this->msg("dir=".$path[0]."\n");
-		if ($this->switchDomain($path[0])) {
-			$this->realcwd .= $path[0];
-			if (!isset($path[1])) return true;
-			$dir = $path[1];
+		// full path enterred 
+		if ($dir[0] === '/' && isset($path[1])) {
+			$domain = $path[1];
+			if (isset($path[2]))
+				$moredir = $path[2];
+		} else {
+			$domain = $path[0];
+			if (isset($path[1]))
+				$moredir = $path[1];
+		}
+		if ($this->switchDomain($domain)) {
+			$this->realcwd = '/'.$domain;
+			if (!isset($moredir)) return true;
+			$dir = $moredir;
 		}
 		return parent::cwd($dir);
 	}
 
 	protected function switchDomain($domain) {
-		if ($domain === $this->cfg->mogilefs->domain) return false;
+		if ($domain === $this->cfg->mogilefs->domain) return true;
 
 		if (isset($this->mogileDomains[$domain])) {
 			$this->oldDomain = $this->cfg->mogilefs->domain;
@@ -58,9 +68,6 @@ class Io_MogileFs_DomainNS extends Io_MogileFs {
 		return $this->realcwd;
 	}
 
-	public function getFilename($path) {	
-		return parent::getFilename(strstr($path, $this->realcwd));
-	}
 }
 
 ?>

@@ -15,6 +15,10 @@
 ****************************************************
 */
 
+// XXX: moved timers into client 
+// XXX: cleanup log class
+// XXX: get rid of DB text module
+
 error_reporting(E_ALL);
 set_time_limit(0);
 

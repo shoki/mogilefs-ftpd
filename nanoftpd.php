@@ -77,7 +77,7 @@ if (!extension_loaded('pcntl')) dl('pcntl.so');
 /* make sure we are not handling all strings as UTF8. binary files are
  * not utf8 encoded and will be broken when using strlen() to get file
  * size */
-if (ini_get('mbstring.func_overload') & 2) {
+if (extension_loaded('mbstring') && ini_get('mbstring.func_overload') & 2) {
 	mb_internal_encoding('latin1');
 }
 

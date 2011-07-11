@@ -15,6 +15,7 @@ migrating to MogileFS.
 
 Author: Andre Pascha <bender@duese.org>
 
+Original Nanoftpd Site: http://nanoftpd.sourceforge.net/
 Original Nanoftpd Authors:
 Arjen <arjenjb@wanadoo.nl>
 Phanatic <linux@psoftwares.hu>
@@ -30,31 +31,6 @@ You need at least PHP 5.2.6 and these PHP extensions to run mogilefs-ftpd:
 
 There is a logrotate config and a init script available in the contrib
 directory.
-
-Hints
-=====
-1. io_file and the database authentication modules are not tested by me and I
-don't know if they work.
-
-2. I use the ftp daemon with the text database authentication which also
-supports using custom IO modules for any user.
-
-3. path convention is <mogilefs class>/<filename>. If your MogileFS is not
-using this convention you can still use this module but you may have to 
-adjust io_mogilfs.php.
-
-4. PHP error logs go to log/nanoftpd.err. Application logs go to
-log/nanoftpd.log
-
-5. password for the shipped test user in users text database is 'test'.
-
-6. when listing files in classes there is a limit for the list.  If you have 
-a large MogileFS class it doesn't really makes sense to list millions of 
-files (tough it is possible if you adjust the listlimit).
-
-7. MKD command can create MogileFS classes and RMD can delete them. 
-
-8. you can even rename files in MogileFS using the RNFR RNTO commands.
 
 Configuration
 =============
@@ -84,6 +60,62 @@ on rmdir command delete a MogileFS class with the given directory name.
 
 mogilefs->mindevcount = 2;
 mindevcount parameter for creating MogileFS classes.
+
+
+IO Modules
+==========
+There is an IO module interface defined in modules/Io/Interface.php. You can
+implement your own modules and plug them into nanoftpd. There are some modules
+in modules/Io to illustrate what you can do with it.
+
+Io_File
+Basic file backend. No MogileFS Support.
+
+Io_MogileFs
+MogileFs Backend where the first directory level represents the MogileFs
+classes. MogileFs filenames are always prefixed by the current class. 
+
+Io_MogileFs_FlatNS
+MogileFs Backend with flat namespace. All files get listed into the root
+directory. MogileFs class is taken from mogilefs->defaultclass when uploading
+files.
+
+Io_MogileFs_DomainNS
+MogileFs Backend with domain namespace. First directory level represents the
+MogileFs domains and the second the corresponding classes. 
+
+Io_MogileFs_UserDomain
+MogileFs Backend where the logged in user is used as the MogileFS Domain.
+
+
+Auth Modules
+============
+You can create authentication plugins. Check the interface definition at 
+modules/Auth/Interface.php. Currently only one module is implemented which
+used a text based user database.
+
+
+Hints
+=====
+1. Io_File is untested.
+
+2. default path convention is <mogilefs class>/<filename>. If your MogileFS is not
+using this convention you can still use this module but you may have to 
+adjust io_mogilfs.php.
+
+3. PHP error logs go to log/nanoftpd.err. Application logs go to
+log/nanoftpd.log
+
+4. password for the shipped users in users text database is 'test'.
+
+5. when listing files in classes there is a limit for the list.  If you have 
+a large MogileFS class it doesn't really makes sense to list millions of 
+files (tough it is possible if you adjust the listlimit).
+
+6. MKD command can create MogileFS classes and RMD can delete them. 
+
+7. you can even rename files in MogileFS using the RNFR RNTO commands.
+
 
 Compatibility
 =============
