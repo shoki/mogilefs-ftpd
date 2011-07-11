@@ -31,6 +31,8 @@ class NanoFTP_Client {
 	public $auth;
 	
 	protected $logintime;
+	protected $scheduler;
+	protected $timers;
 
 	public function __construct($CFG, $connection, $id) {
 		
@@ -49,14 +51,28 @@ class NanoFTP_Client {
 		$this->log = $this->CFG->log;
 		$this->pasv_pool = new NanoFTP_Pool();
 
+		$this->log->setPrefix("[".getmypid()."]");
+
+		$this->scheduler = APA_Timerscheduler::get();
+
 		/* handle sigpipe */
 		pcntl_signal(SIGPIPE, array($this, 'disconnect'));
+	}
+
+	public function __destruct() {
+		/* kill all timers */
+		foreach ($this->timers as $timer) {
+			$this->scheduler->stopTimer($timer);
+		}
 	}
 	
 	public function init() {
 		$this->command		= "";
 		$this->parameter	= "";
 		$this->transfertype = "A";
+
+		/* start idle timer */
+		$this->timers['idle_time'] = $this->scheduler->startTimer($this->CFG->idle_time, $this, 'disconnect', array("421 client disconnected because of idle timeout (".$this->CFG->idle_time." seconds)"));
 
 		$this->send("220 " . $this->CFG->server_name);
 
@@ -77,7 +93,10 @@ class NanoFTP_Client {
 
 	public function interact() {
 		$this->return = true;
-		
+
+		/* something happend, so restart the idle * timer */
+		$this->scheduler->restartTimer($this->timers['idle_time'], $this->CFG->idle_time);
+
 		if (strlen($this->buffer)) {
 
 			$this->command		= trim(strtoupper(substr(trim($this->buffer), 0, 4)));
@@ -85,94 +104,99 @@ class NanoFTP_Client {
 
 			$command = $this->command;
 
-			if ($command == "QUIT") {
-				$this->log->write("client: " . trim($this->buffer) . "\n");
-				$this->cmd_quit();
-				return $this->return;
-
-			} elseif ($command == "USER") {
-				$this->log->write("client: " . trim($this->buffer) . "\n");
-				$this->cmd_user();
-				return $this->return;
-
-			} elseif ($command == "PASS") {
-				$this->log->write("client: PASS xxxx\n");
-				$this->cmd_pass();
-				return $this->return;
-
-			}
+			switch ($command) {
+				case "QUIT":
+					$this->log->write("client: " . trim($this->buffer) . "\n");
+					$this->cmd_quit();
+					return $this->return;
+				case "USER":
+					$this->log->write("client: " . trim($this->buffer) . "\n");
+					$this->cmd_user();
+					return $this->return;
+				case "PASS":
+					$this->log->write("client: PASS xxxx\n");
+					$this->cmd_pass();
+					return $this->return;
+			}	
 
 			$this->io->parameter = $this->parameter;
 			
 			$this->log->write($this->user . ": ".trim($this->buffer)."\n");
+
 			if (! $this->loggedin) {
 				$this->send("530 Not logged in.");
-			} elseif ($command == "LIST" || $command == "NLST") {
-				$this->cmd_list();
-
-			} elseif ($command == "PASV") {
-				$this->cmd_pasv();
-
-			} elseif ($command == "PORT") {
-				$this->cmd_port();
-
-			} elseif ($command == "SYST") {
-				$this->cmd_syst();
-
-			} elseif ($command == "PWD") {
-				$this->cmd_pwd();
-
-			} elseif ($command == "CWD") {
-				$this->cmd_cwd();
-
-			} elseif ($command == "CDUP") {
-				$this->cmd_cwd();
-
-			} elseif ($command == "TYPE") {
-				$this->cmd_type();
-
-			} elseif ($command == "NOOP") {
-				$this->cmd_noop();
-
-			} elseif ($command == "RETR") {
-				$this->cmd_retr();
-
-			} elseif ($command == "SIZE") {
-				$this->cmd_size();
-
-			} elseif ($command == "STOR") {
-				$this->cmd_stor();
-
-			} elseif ($command == "DELE") {
-				$this->cmd_dele();
-
-			} elseif ($command == "HELP") {
-				$this->cmd_help();
-				
-			} elseif ($command == "SITE") {
-				$this->cmd_site();
-
-			} elseif ($command == "APPE") {
-				$this->cmd_appe();
-		
-			} elseif ($command == "MKD") {
-				$this->cmd_mkd();
-					    
-			} elseif ($command == "RMD") {
-				$this->cmd_rmd();
-									
-			} elseif ($command == "RNFR") {
-				$this->cmd_rnfr();
-												    
-			} elseif ($command == "RNTO") {
-				$this->cmd_rnto();
-
-			} elseif ($command == "MDTM") {
-				$this->cmd_mdtm();
-
 			} else {
-				$this->send("502 Command not implemented.");
+				switch ($command) {
+					case "LIST":
+					case "NLST":
+						$this->cmd_list();
+						break;
+					case "PASV":
+						$this->cmd_pasv();
+						break;
+					case "PORT":
+						$this->cmd_port();
+						break;
+					case "SYST":
+						$this->cmd_syst();
+						break;
+					case "PWD":
+						$this->cmd_pwd();
+						break;
+					case "CWD":
+						$this->cmd_cwd();
+						break;
+					case "CDUP":
+						$this->cmd_cwd();
+						break;
+					case "TYPE":
+						$this->cmd_type();
+						break;
+					case "NOOP":
+						$this->cmd_noop();
+						break;
+					case "RETR":
+						$this->cmd_retr();
+						break;
+					case "SIZE":
+						$this->cmd_size();
+						break;
+					case "STOR":
+						$this->cmd_stor();
+						break;
+					case "DELE":
+						$this->cmd_dele();
+						break;
+					case "HELP":
+						$this->cmd_help();
+						break;
+					case "SITE":
+						$this->cmd_site();
+						break;
+					case "APPE":
+						$this->cmd_appe();
+						break;
+					case "MKD":
+						$this->cmd_mkd();
+						break;
+					case "RMD":
+						$this->cmd_rmd();
+						break;
+					case "RNFR":
+						$this->cmd_rnfr();
+						break;
+					case "RNTO":
+						$this->cmd_rnto();
+						break;
+					case "MDTM":
+						$this->cmd_mdtm();
+						break;
+					default:
+						$this->send("502 Command not implemented.");
+						break;
+				}
 			}
+
 
 			return $this->return;
 		}
@@ -188,6 +212,7 @@ class NanoFTP_Client {
 			if (is_resource($this->data_conn)) socket_close($this->data_conn);
 			if (is_resource($this->data_socket)) socket_close($this->data_socket);
 		}
+		exit(0);
 	}
 
 	/*
@@ -384,7 +409,7 @@ class NanoFTP_Client {
 		return;
 	    }
 	    
-    	    $io = &$this->io;
+    	    $io = $this->io;
 	    
 	    if (!$io->md($dir)) {
 		$this->send("553 Requested action not taken.");
@@ -407,7 +432,7 @@ class NanoFTP_Client {
 		return;
 	    }
 	    
-	    $io = &$this->io;
+	    $io = $this->io;
 	    
 	    if (!$io->rd($dir)) {
 		$this->send("553 Requested action not taken.");
@@ -430,7 +455,7 @@ class NanoFTP_Client {
 		return;
 	    }
 	    
-	    $io = &$this->io;
+	    $io = $this->io;
 	    
 	    if (!$io->exists($file)) {
 		$this->send("553 Requested action not taken.");
@@ -460,7 +485,7 @@ class NanoFTP_Client {
 		return;
 	    }
 	    
-	    $io = &$this->io;
+	    $io = $this->io;
 	    
 	    if ($io->rn($this->rnfr, $file)) {
 		$this->send("250 RNTO command successful.");
@@ -490,7 +515,7 @@ class NanoFTP_Client {
 	protected function cmd_stor() {
 		$file = trim($this->parameter);
 
-		$io = &$this->io;
+		$io = $this->io;
 
 		/* XXX: doesn't really make sense here, make this io module specific
 		if ($io->exists($file)) {
@@ -539,7 +564,7 @@ class NanoFTP_Client {
 		return;
 	    }
 	    
-	    $io = &$this->io;
+	    $io = $this->io;
 	    
 	    $this->send("150 File status okay; openening " . $this->transfer_text() . " connection.");
 	    $this->data_open();
@@ -585,7 +610,7 @@ class NanoFTP_Client {
 			return;
 		}
 
-		$io = &$this->io;
+		$io = $this->io;
 		$filename = $this->io->root.$this->io->cwd.$file;
 
 		if (!$this->io->validate_filename($filename)) {
@@ -628,7 +653,7 @@ class NanoFTP_Client {
 
 	protected function cmd_pasv() {
 
-		$pool = &$this->pasv_pool;
+		$pool = $this->pasv_pool;
 
 		socket_getsockname($this->connection, $local_addr);
 
@@ -752,7 +777,7 @@ class NanoFTP_Client {
 		    return;
 		}
 
-		$io = &$this->io;
+		$io = $this->io;
 
 		if (! $this->io->exists($file)) {
 			$this->send("553 Requested action not taken.");
@@ -863,8 +888,6 @@ class NanoFTP_Client {
 	protected function transfer_text() {
 		return ($this->transfertype == "A") ? "ASCII mode" : "Binary mode";
 	}
-
-
 }
 
 ?>

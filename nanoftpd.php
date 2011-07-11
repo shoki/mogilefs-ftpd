@@ -18,59 +18,6 @@
 
 include(dirname(__FILE__)."/config.php");
 
-class Daemon extends APA_Daemon {
-	protected $server;
-
-	public function __construct() {
-		global $CFG;
-
-		$this->pidFileLocation = $CFG->pidfile;
-		$this->userID = $CFG->userid;
-		$this->groupID = $CFG->groupid;
-
-		parent::__construct();
-	}
-
-	public function _doTask() {
-		global $CFG;
-
-		declare(ticks = 1);
-		pcntl_signal(SIGCHLD, array($this, 'sigHandler'));
-		pcntl_signal(SIGTERM, array($this, 'sigHandler'));
-
-		$this->server = new NanoFTP_Server($CFG);
-		$this->server->run();
-
-	}
-
-	public function sigHandler($signo) {
-		switch ($signo) {
-			case SIGTERM:
-				// cleanup childs and exit
-				$this->_logMessage("exiting on SIGTERM");
-				/* father will kill its childs */
-				if (!$this->server->isChild) {
-					$this->server->broadcast_signal($signo);
-					// XXX should wait here until all childs are gone
-					$this->releaseDaemon();
-				}
-				exit(0);
-				break;
-			case SIGCHLD:
-				$this->server->reaper();
-				break;
-			default:
-				$this->_logMessage("unknown signal: ".$signo);
-				break;
-		}
-	}
-
-	public function _logMessage($msg, $level = DLOG_NOTICE) {
-		if (is_object($this->server) && is_object($this->server->log)) $this->server->log->write($msg."\n");
-		else error_log($msg);
-	}
-}
-
 if (!extension_loaded('sockets')) dl('sockets.so');
 if (!extension_loaded('pcntl')) dl('pcntl.so');
 
@@ -81,8 +28,16 @@ if (extension_loaded('mbstring') && ini_get('mbstring.func_overload') & 2) {
 	mb_internal_encoding('latin1');
 }
 
+error_reporting(E_ALL);
+set_time_limit(0);
+
+function __autoload($class_name) {
+	$name = str_replace("_", "/", $class_name);
+    require_once $name . '.php';
+}
+
 if ($CFG->daemonize) {
-	$daemon = new Daemon();
+	$daemon = new NanoFTP_Daemon($CFG);
 	$daemon->start();
 } else {
 	$server = new NanoFTP_Server($CFG);

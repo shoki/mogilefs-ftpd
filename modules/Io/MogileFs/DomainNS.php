@@ -68,6 +68,9 @@ class Io_MogileFs_DomainNS extends Io_MogileFs {
 		return $this->realcwd;
 	}
 
+	public function getFilename($path) {
+		return parent::getFilename($path);
+	}
 }
 
 ?>

@@ -2,8 +2,16 @@
 
 /* runs timers and returns time till next timers has to be run */
 class APA_TimerScheduler {
-	private $timerhandle = 10;
-	private $timers = array();
+	private static $timerhandle = 10;
+	private static $timers = array();
+	private static $instance;
+
+	public static function &get() {
+		if (!self::$instance) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
 
 	public function restartTimer($key, $runtime) {
 		if ( $this->timers[$key]) {

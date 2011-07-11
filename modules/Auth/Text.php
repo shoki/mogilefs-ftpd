@@ -2,6 +2,7 @@
 
 class Auth_Text implements Auth_Interface {
 	protected $cfg;
+	protected $users = array();
 	protected $user;
 	protected $user_uid;
 	protected $user_gid;
@@ -12,25 +13,35 @@ class Auth_Text implements Auth_Interface {
 	}
 
 	public function authenticate($username, $password) {
+		$this->loadUsers();
+
 		if (!function_exists($this->cfg->auth->crypt)) {
 			// invalid hash function 
 			return false;
 		}
 
-		$ret = false;
-		$txtdb = new NanoFTP_DBText($this->cfg->auth->text->file, $this->cfg->auth->text->sep);
-
-		$this->user = $username;
-
-		if (!$txtdb->user_exist($this->user)) {
-			$ret = false;
-		} elseif ($txtdb->user_get_property($this->user, "password") == call_user_func($this->cfg->auth->crypt, $password)) {
-			$this->user_uid = $txtdb->user_get_property($this->user, "uid");
-			$this->user_gid = $txtdb->user_get_property($this->user, "gid");
-			$this->io_module = "Io_" . $txtdb->user_get_property($this->user, "io_module");
-			$ret = true;
+		if (isset($this->users[$username]) && $this->users[$username]['password'] == call_user_func($this->cfg->auth->crypt, $password)) {
+			$this->user = $username;
+			$this->user_uid = $this->users[$username]['uid'];
+			$this->user_gid = $this->users[$username]['gid'];
+			$this->io_module = "Io_" . $this->users[$username]['io_module'];
+			return true;
 		}
-		return $ret;
+		return false;
+	}
+
+	protected function loadUsers() {
+		$entries = explode("\n", file_get_contents($this->cfg->auth->text->file));
+		foreach ($entries as $entry) {
+			$f = explode($this->cfg->auth->text->sep, $entry);
+			if (count($f) != 5) continue;
+			$this->users[$f[0]] = array ( 
+					'password' => $f[1],
+					'uid'	   => $f[2],
+					'gid'	   => $f[3],
+					'io_module'=> $f[4],
+					);
+		}
 	}
 
 	public function getUserid($username) {

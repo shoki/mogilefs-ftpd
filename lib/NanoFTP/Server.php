@@ -32,7 +32,7 @@ class NanoFTP_Server {
 		$this->socket = false;
 		$this->clients = Array();
 
-		$this->scheduler = new APA_TimerScheduler();
+		$this->scheduler = APA_TimerScheduler::get();
 		$this->setProcTitle("nanoftpd [master]");
 	}
 
@@ -108,9 +108,6 @@ class NanoFTP_Server {
 								$this->clients[$clientID]->appendBuffer($read);
 							} else {
 								$this->clients[$clientID]->appendBuffer(str_replace("\n", "", $read));
-								
-								/* something happend, so restart the idle * timer */
-								$this->scheduler->restartTimer($this->timers['idle_time'], $this->CFG->idle_time);
 
 								if (! $this->clients[$clientID]->interact()) {
 									$this->clients[$clientID]->disconnect();
@@ -136,7 +133,7 @@ class NanoFTP_Server {
 			/* I AM YOUR FATHER */
 			/* close the client socket, we don't need it */
 			socket_close($conn);
-			$this->pids[$pid] = true;
+			$this->pids[$pid] = $clientID;
 			return true;
 		} elseif ($pid === -1) {
 			$this->log->write("could not fork");
@@ -153,15 +150,10 @@ class NanoFTP_Server {
 			socket_close($this->socket);
 			$this->socket = $conn;
 
-			$this->log->setPrefix("[".getmypid()."]");
-
 			$this->setProcTitle("nanoftpd [worker]");
 
 			// add socket to client list and announce connection
 			$this->clients[$clientID] = new NanoFTP_Client($this->CFG, $conn, $clientID);
-
-			/* start idle timer */
-			$this->timers['idle_time'] = $this->scheduler->startTimer($this->CFG->idle_time, $this, 'disconnect_client', array($clientID, "421 client disconnected because of idle timeout (".$this->CFG->idle_time." seconds)"));
 
 			// everything is ok, initialize client
 			$this->clients[$clientID]->init();
@@ -174,7 +166,11 @@ class NanoFTP_Server {
 		do {
 			$deadpid = pcntl_waitpid(-1, $cstat, WNOHANG);
 			if ($deadpid > 0) {
-				if (isset($this->pids[$deadpid])) unset($this->pids[$deadpid]);
+				if (isset($this->pids[$deadpid])) {
+					if (isset($this->clients[$this->pids[$deadpid]]))
+						$this->remove_client($this->clients[$this->pids[$deadpid]]);
+					unset($this->pids[$deadpid]);
+				}
 				$this->log->write("pid ".$deadpid." died with exit code: ".pcntl_wexitstatus($cstat)." clients running: ".count($this->pids)." memory usage: ".memory_get_usage()."\n");
 			}
 		} while ($deadpid > 0);
@@ -200,17 +196,15 @@ class NanoFTP_Server {
 
 	public function disconnect_client($clientID, $msg = "421 administrative disconnect") {
 		if (!isset($this->clients[$clientID])) return false;
-		/* kill all timers */
-		foreach ($this->timers as $timer) {
-			$this->scheduler->stopTimer($timer);
-		}
 		$c = $this->clients[$clientID];
 		$c->disconnect($msg);
 		$this->remove_client($clientID);
 	}
 
 	protected function remove_client($clientID) {
-		if (isset($this->clients[$clientID])) unset($this->clients[$clientID]);
+		if (isset($this->clients[$clientID])) {
+			unset($this->clients[$clientID]);
+		}
 		/* child done */
 		if ($this->clientID != 'server') exit(0);
 	}
