@@ -1,6 +1,6 @@
 <?php
 
-class auth_text implements auth_interface {
+class Auth_Text implements Auth_Interface {
 	protected $cfg;
 	protected $user;
 	protected $user_uid;
@@ -12,8 +12,6 @@ class auth_text implements auth_interface {
 	}
 
 	public function authenticate($username, $password) {
-		require_once($this->cfg->libdir."/db_".$this->cfg->auth->module.".php");
-
 		if (!function_exists($this->cfg->auth->crypt)) {
 			// invalid hash function 
 			return false;
@@ -29,7 +27,7 @@ class auth_text implements auth_interface {
 		} elseif ($txtdb->user_get_property($this->user, "password") == call_user_func($this->cfg->auth->crypt, $password)) {
 			$this->user_uid = $txtdb->user_get_property($this->user, "uid");
 			$this->user_gid = $txtdb->user_get_property($this->user, "gid");
-			$this->io_module = "io_" . $txtdb->user_get_property($this->user, "io_module");
+			$this->io_module = "Io_" . $txtdb->user_get_property($this->user, "io_module");
 			$ret = true;
 		}
 		return $ret;

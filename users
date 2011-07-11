@@ -1,1 +1,5 @@
-test:098f6bcd4621d373cade4e832627b4f6:1000:1000:mogilefs
+test:098f6bcd4621d373cade4e832627b4f6:1000:1000:MogileFs
+blockoland:098f6bcd4621d373cade4e832627b4f6:1000:1000:MogileFs_UserDomain
+jaumodev:098f6bcd4621d373cade4e832627b4f6:1000:1000:MogileFs_UserDomain
+ftp:098f6bcd4621d373cade4e832627b4f6:1000:1000:MogileFs_FlatNS
+root:098f6bcd4621d373cade4e832627b4f6:1000:1000:MogileFs_DomainNS

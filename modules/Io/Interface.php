@@ -1,6 +1,6 @@
 <?php
 
-interface io_interface {
+interface Io_Interface {
 	
 	public function init() ;
 	public function cwd($dir) ;

@@ -15,7 +15,7 @@
 */
 
 // This class is for logging actions
-class log {
+class NanoFTP_Log {
    
     // path to file
     private $logfile;

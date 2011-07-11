@@ -1,63 +1,42 @@
 <?php
 
-// XXX: cleanup
-// XXX: add autoload__
+class NanoFTP_Server {
 
-include($CFG->libdir."/timer.php");
-include($CFG->libdir."/timerscheduler.php");
+	public $CFG;
 
-class server {
-
-	var $CFG;
-
-	var $listen_addr;
-	var $listen_port;
-
-	var $socket;
-	var $clients;
+	protected $socket;
+	protected $clients;
 	
-	var $log;
-	var $clientID;
+	protected $log;
+	protected $clientID;
 
-	var $isChild;
+	protected $isChild;
 
-	var $timers = array();
-	var $scheduler = array();
+	protected $timers = array();
+	protected $scheduler = array();
 
-	var $pids = array();
+	protected $pids = array();
 
-	function server($CFG) {
+	public function __construct($CFG) {
 
 		$this->CFG = $CFG;
-		$this->log = &$CFG->log;
+		$this->CFG->log = $this->log = new NanoFTP_Log($CFG);
 		$this->log->setPrefix("[".getmypid()."]");
 		$this->isChild = false;
-		
 		$this->init();
-
-		$allowed_directives = array(
-			"listen_addr"
-			,"listen_port"
-		);
-
-		foreach(get_object_vars($CFG) as $var => $value) {
-			if (in_array($var, $allowed_directives)) $this->$var = $value;
-		}
 	}
 
-	function init() {
-		$this->listen_addr = 0;
-		$this->listen_port = 21;
+	public function init() {
 		$this->clientID = 'server';
 
 		$this->socket = false;
 		$this->clients = Array();
 
-		$this->scheduler = new TimerScheduler();
+		$this->scheduler = new APA_TimerScheduler();
 		$this->setProcTitle("nanoftpd [master]");
 	}
 
-	private function setup_socket() {
+	protected function setup_socket() {
 		// assign listening socket 
 		if (! ($this->socket = @socket_create(AF_INET, SOCK_STREAM, 0)))
 			$this->socket_error();
@@ -71,7 +50,7 @@ class server {
 			$this->socket_error();
 
 		// bind listening socket to specific address/port 
-		if (! @socket_bind($this->socket, $this->listen_addr, $this->listen_port))
+		if (! @socket_bind($this->socket, $this->CFG->listen_addr, $this->CFG->listen_port))
 			$this->socket_error();
 
 		// listen on listening socket
@@ -80,7 +59,7 @@ class server {
 
 	}
 
-	function run() {
+	public function run() {
 		$this->setup_socket();
 		// set initial vars and loop until $abort is set to true
 		$abort = false;
@@ -126,9 +105,9 @@ class server {
 						} else {
 							// only want data with a newline
 							if (strchr(strrev($read), "\n") === false) {
-								$this->clients[$clientID]->buffer .= $read;
+								$this->clients[$clientID]->appendBuffer($read);
 							} else {
-								$this->clients[$clientID]->buffer .= str_replace("\n", "", $read);
+								$this->clients[$clientID]->appendBuffer(str_replace("\n", "", $read));
 								
 								/* something happend, so restart the idle * timer */
 								$this->scheduler->restartTimer($this->timers['idle_time'], $this->CFG->idle_time);
@@ -137,7 +116,7 @@ class server {
 									$this->clients[$clientID]->disconnect();
 									$this->remove_client($clientID);
 								} else {
-									$this->clients[$clientID]->buffer = "";
+									$this->clients[$clientID]->resetBuffer();
 								}
 							}
 						}
@@ -149,7 +128,7 @@ class server {
 		}
 	}
 
-	private function add_client($conn) {
+	protected function add_client($conn) {
 		$clientID = uniqid("client_");
 
 		$pid = pcntl_fork() ;
@@ -179,7 +158,7 @@ class server {
 			$this->setProcTitle("nanoftpd [worker]");
 
 			// add socket to client list and announce connection
-			$this->clients[$clientID] = new client($this->CFG, $conn, $clientID);
+			$this->clients[$clientID] = new NanoFTP_Client($this->CFG, $conn, $clientID);
 
 			/* start idle timer */
 			$this->timers['idle_time'] = $this->scheduler->startTimer($this->CFG->idle_time, $this, 'disconnect_client', array($clientID, "421 client disconnected because of idle timeout (".$this->CFG->idle_time." seconds)"));
@@ -190,7 +169,7 @@ class server {
 		}
 	}
 
-	public function reaper() {
+	protected function reaper() {
 		/* reap clients */
 		do {
 			$deadpid = pcntl_waitpid(-1, $cstat, WNOHANG);
@@ -209,7 +188,7 @@ class server {
 		}
 	}
 
-	function get_client_connections() {
+	protected function get_client_connections() {
 		$conn = array();
 
 		foreach($this->clients as $clientID => $client) {
@@ -219,25 +198,24 @@ class server {
 		return $conn;
 	}
 
-	function disconnect_client($clientID, $msg = "421 administrative disconnect") {
+	public function disconnect_client($clientID, $msg = "421 administrative disconnect") {
 		if (!isset($this->clients[$clientID])) return false;
 		/* kill all timers */
 		foreach ($this->timers as $timer) {
 			$this->scheduler->stopTimer($timer);
 		}
 		$c = $this->clients[$clientID];
-		$c->send($msg);
-		$c->disconnect();
+		$c->disconnect($msg);
 		$this->remove_client($clientID);
 	}
 
-	function remove_client($clientID) {
+	protected function remove_client($clientID) {
 		if (isset($this->clients[$clientID])) unset($this->clients[$clientID]);
 		/* child done */
 		if ($this->clientID != 'server') exit(0);
 	}
 
-	function socket_error() {
+	protected function socket_error() {
 	    $this->log->write("socket: error: ".socket_strerror(socket_last_error($this->socket))."\n");
 	    if (is_resource($this->socket)) socket_close($this->socket);
 	    die;

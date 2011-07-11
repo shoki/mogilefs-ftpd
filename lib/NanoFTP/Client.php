@@ -1,46 +1,42 @@
 <?php
 
-class client {
+class NanoFTP_Client {
 
-	var $CFG;
+	public $CFG;
 
-	var $id;
-	var $connection;
-	var $buffer;
-	var $transfertype;
-	var $loggedin;
-	var $user;
+	protected $id;
+	protected $connection;
+	protected $buffer;
+	protected $transfertype;
+	protected $loggedin;
+	protected $user;
 	
-	var $user_uid;
-	var $user_gid;
+	protected $addr;
+	protected $port;
+	protected $pasv;
 
-	var $addr;
-	var $port;
-	var $pasv;
-
-	var $data_addr;
-	var $data_port;
+	protected $data_addr;
+	protected $data_port;
 	// passive ftp data socket and connection
-	var $data_socket;
-	var $data_conn;
+	protected $data_socket;
+	protected $data_conn;
 	// active ftp data socket pointer
-	var $data_fsp;
+	protected $data_fsp;
 
-	var $command;
-	var $parameter;
-	var $return;
+	public $command;
+	public $parameter;
+	public $return;
 
-	var $io;
-	var $auth;
+	protected $io;
+	public $auth;
 	
-	var $table;
-	var $logintime;
+	protected $logintime;
 
-	function client(&$CFG, $connection, $id) {
+	public function __construct($CFG, $connection, $id) {
 		
 		$this->id = $id;
 		$this->connection = $connection;
-		$this->CFG = &$CFG;
+		$this->CFG = $CFG;
 		
 		socket_getpeername($this->connection, $addr, $port);
 		$this->addr = $addr;
@@ -50,22 +46,16 @@ class client {
 
 		$this->logintime = microtime(true);
 
-		$this->log = &$this->CFG->log;
+		$this->log = $this->CFG->log;
+		$this->pasv_pool = new NanoFTP_Pool();
 
 		/* handle sigpipe */
 		pcntl_signal(SIGPIPE, array($this, 'disconnect'));
 	}
 	
-	function init() {
-		$this->table = $this->CFG->table;
-
-		$this->auth = new libauth();
-
-		$this->buffer = '';
-
+	public function init() {
 		$this->command		= "";
 		$this->parameter	= "";
-		$this->buffer		= "";
 		$this->transfertype = "A";
 
 		$this->send("220 " . $this->CFG->server_name);
@@ -73,7 +63,19 @@ class client {
 		if (! is_resource($this->connection)) die;
 	}
 
-	function interact() {
+	public function getUser() {
+		return $this->user;
+	}
+
+	public function appendBuffer($buffer) {
+		$this->buffer .= $buffer;
+	}
+
+	public function resetBuffer() {
+		$this->buffer = "";
+	}
+
+	public function interact() {
 		$this->return = true;
 		
 		if (strlen($this->buffer)) {
@@ -176,7 +178,10 @@ class client {
 		}
 	}
 
-	function disconnect() {
+	public function disconnect($reason = null) {
+		if ($reason)
+			$c->send($reason);
+
 		if (is_resource($this->connection)) socket_close($this->connection);
 
 		if ($this->pasv) {
@@ -191,7 +196,7 @@ class client {
 	DESCRIPTION: shows the list of available commands...
 	NOTE: -
 	*/
-	function cmd_help() {
+	protected function cmd_help() {
 		$this->send($this->io->help());
 	}
 
@@ -201,7 +206,7 @@ class client {
 	DESCRIPTION: closes the connection to the server...
 	NOTE: -
 	*/
-	function cmd_quit() {
+	protected function cmd_quit() {
 		$this->send("221 Disconnected. Connection duration: ".round((float)microtime(true) - (float)$this->logintime, 4)." seconds.");
 		$this->disconnect();
 
@@ -214,7 +219,7 @@ class client {
 	DESCRIPTION: logs <username> in...
 	NOTE: -
 	*/
-	function cmd_user() {
+	protected function cmd_user() {
 
 		$this->loggedin = false;
 		$this->user = $this->parameter;
@@ -228,7 +233,7 @@ class client {
 	DESCRIPTION: checks <password>, whether it's correct...
 	NOTE: added authentication library support by Phanatic (26/12/2002)
 	*/
-	function cmd_pass() {
+	protected function cmd_pass() {
 
 	    if (! $this->user) {
 			$this->user = "";
@@ -237,68 +242,29 @@ class client {
 			return;
 	    }
 
-	    switch ($this->CFG->crypt) {
-			case "md5":
-			    $pass = md5($this->parameter);
-			    break;
-			case "plain":
-			    $pass = $this->parameter;
-			    break;
-	    }
-	    
-	    if ($this->CFG->dbtype != "text") {
-			$qid = db_query("
-				SELECT
-					*
-				FROM
-					".$this->table['name']."
-				WHERE
-					".$this->table['username']." = '$this->user'
-					AND ".$this->table['password']." = '$pass'
-			");
-	
-			if (db_num_rows($qid)) {
-				$this->send("230 User " . $this->user . " logged in from " . $this->addr . ".");
-				$this->loggedin = true;
-				
-				$userinfo = db_fetch_array($qid);
-				$this->user_uid = $userinfo[$this->table['uid']];
-				$this->user_gid = $userinfo[$this->table['gid']];
-			} else {
-				$this->send("530 Not logged in.");
-				$this->loggedin = false;
-			}
-		} else {
-			$txtdb = new database($this->CFG->text['file'], $this->CFG->text['sep']);
+		try {
+			$module = "Auth_" . $this->CFG->auth->module;
+			//require_once($this->CFG->moddir . "/" . $module . '.php');
+			if (!class_exists($module))
+				throw new Exception("failed to load authentication module: ".$module);
 
-			if (!$txtdb->user_exist($this->user)) {
-			    $this->send("530 Not logged in.");
-			    $this->loggedin = false;
-			} elseif ($txtdb->user_get_property($this->user, "password") == $pass) {
-			    $this->send("230 User " . $this->user . " logged in from ".$this->addr.".");
-			    $this->user_uid = $txtdb->user_get_property($this->user, "uid");
-			    $this->user_gid = $txtdb->user_get_property($this->user, "gid");
-				/* module is configured via user */
-				try {
-					$module = "io_" . $txtdb->user_get_property($this->user, "io_module");
-					require_once($this->CFG->moddir . "/" . $module . '.php');
-					$this->io = new $module($this);
-					$this->loggedin = true;
-				} catch (Exception $e) {
-					$this->send("530 Failed to init io module");
-					$this->cmd_quit();
-				}
-			} else {
-			    $this->send("530 Not logged in.");
-			    $this->loggedin = false;
-			}
-	    }
-	    
-	    if (! $this->auth->auth($this->user_uid, $this->user_gid)) {
-			$this->send("550 Ooops. Couldn't load authentication library, or someone hacked your account (no root access allowed).");
-			$this->cmd_quit();
-	    }
+			$this->auth = new $module($this->CFG);
+			if (!$this->auth->authenticate($this->user, $this->parameter))
+				throw new Exception("authentication failed");
 
+			$io_module = $this->auth->getIoModule();
+			//require_once($this->CFG->moddir . "/" . $io_module . '.php');
+			if (!class_exists($io_module))
+				throw new Exception("failed to load io module: ".$io_module);
+
+			$this->io = new $io_module($this);
+			$this->io->init();
+			$this->loggedin = true;
+			$this->send("230 User ".$this->user." logged in from ".$this->addr.".");
+		} catch (Exception $e) {
+			$this->send("530 Not logged in. (".$e->getMessage().")");
+			$this->loggedin = false;
+		}
 	}
 
 	/*
@@ -307,7 +273,7 @@ class client {
 	DESCRIPTION: returns system type...
 	NOTE: -
 	*/
-	function cmd_syst() {
+	protected function cmd_syst() {
 		$this->send("215 UNIX Type: L8");
 	}
 
@@ -317,12 +283,12 @@ class client {
 	DESCRIPTION: changes current directory to <directory> / changes current directory to parent directory...
 	NOTE: -
 	*/
-	function cmd_cwd() {
+	protected function cmd_cwd() {
 		if ($this->command  == "CDUP") {
-			$this->io->parameter = "..";
+			$this->parameter = "..";
 		}
 
-		if ($this->io->cwd() !== false) {
+		if ($this->io->cwd($this->parameter) !== false) {
 			$this->send("250 CWD command succesful.");
 		} else {
 			$this->send("450 Requested file action not taken.");
@@ -335,7 +301,7 @@ class client {
 	DESCRIPTION: returns current directory...
 	NOTE: -
 	*/
-	function cmd_pwd() {
+	protected function cmd_pwd() {
 		$dir = $this->io->pwd();
 		$this->send("257 \"" . $dir . "\" is current directory.");
 	}
@@ -346,7 +312,7 @@ class client {
 	DESCRIPTION: returns the filelist of the current directory...
 	NOTE: should implement the <directory> parameter to be RFC-compilant...
 	*/
-	function cmd_list() {
+	protected function cmd_list() {
 
 		$ret = $this->data_open();
 
@@ -357,7 +323,7 @@ class client {
 
 		$this->send("150 Opening  " . $this->transfer_text() . " data connection.");
 
-		foreach($this->io->ls() as $info) {
+		foreach($this->io->ls($this->parameter) as $info) {
 			// formatted list output added by Phanatic 
 
 			$formatted_list = sprintf("%-11s%-2s%-15s%-15s%-10s%-13s".$info['name'], $info['perms'], "1", $info['owner'], $info['group'], $info['size'], $info['time']);
@@ -378,7 +344,7 @@ class client {
 	DESCRIPTION: delete <filename>...
 	NOTE: authentication check added by Phanatic (26/12/2002)
 	*/
-	function cmd_dele() {
+	protected function cmd_dele() {
 		if (strpos(trim($this->parameter), "..") !== false) {
 			$this->send("550 Permission denied.");
 			return;
@@ -389,10 +355,10 @@ class client {
 		} else {
 			$file = $this->io->root.$this->io->cwd.$this->parameter;
 		}
-		if (!$this->io->validate_filename($file)) { // XXX
+		if (!$this->io->validate_filename($file)) { 
 			$this->send("550 Resource is not a file.");
 		} else {	
-			if ($this->io->check_can_write($file) && !$this->auth->can_write($file)) { // XXX
+			if (!$this->io->canWrite($file)) { 
 				$this->send("550 Permission denied.");
 			} else {
 				if (!$this->io->rm($this->parameter)) {
@@ -410,7 +376,7 @@ class client {
 	DESCRIPTION: creates the specified directory...
 	NOTE: -
 	*/
-	function cmd_mkd() {
+	protected function cmd_mkd() {
 	    $dir = trim($this->parameter);
 	    
 	    if (strpos($dir, "..") !== false) {
@@ -433,7 +399,7 @@ class client {
 	DESCRIPTION: removes the specified directory (must be empty)...
 	NOTE: -
 	*/
-	function cmd_rmd() {
+	protected function cmd_rmd() {
 	    $dir = trim($this->parameter);
 	    
 	    if (strpos($dir, "..") !== false) {
@@ -456,7 +422,7 @@ class client {
 	DESCRIPTION: sets the specified file for renaming...
 	NOTE: -
 	*/
-	function cmd_rnfr() {
+	protected function cmd_rnfr() {
 	    $file = trim($this->parameter);
 	    
 	    if (strpos($file, "..") !== false) {
@@ -481,7 +447,7 @@ class client {
 	DESCRIPTION: sets the target of the renaming...
 	NOTE: -
 	*/
-	function cmd_rnto() {
+	protected function cmd_rnto() {
 	    $file = trim($this->parameter);
 	    
 	    if (!isset($this->rnfr) || strlen($this->rnfr) == 0) {
@@ -503,7 +469,7 @@ class client {
 	    }
 	}
 
-	function cmd_mdtm() {
+	protected function cmd_mdtm() {
 	    $file = trim($this->parameter);
 
 		if (method_exists($this->io, 'mdtm')) {
@@ -521,7 +487,7 @@ class client {
 	DESCRIPTION: stores a local file on the server...
 	NOTE: -
 	*/
-	function cmd_stor() {
+	protected function cmd_stor() {
 		$file = trim($this->parameter);
 
 		$io = &$this->io;
@@ -565,7 +531,7 @@ class client {
 	DESCRIPTION: if <file> exists, the recieved data should be appended to that file...
 	NOTE: -
 	*/
-	function cmd_appe() {
+	protected function cmd_appe() {
 	    $file = trim($this->parameter);
 	    
 	    if (strpos($file, "..") !== false) {
@@ -611,7 +577,7 @@ class client {
 	DESCRIPTION: retrieve a file from the server...
 	NOTE: authentication check added by Phanatic (26/12/2002)
 	*/
-	function cmd_retr() {
+	protected function cmd_retr() {
 		$file = trim($this->parameter);
 
 		if (strpos($file, "..") !== false) {
@@ -622,7 +588,6 @@ class client {
 		$io = &$this->io;
 		$filename = $this->io->root.$this->io->cwd.$file;
 
-		// XXX
 		if (!$this->io->validate_filename($filename)) {
 			$this->send("550 Resource is not a file. $filename");
 			return;
@@ -632,8 +597,7 @@ class client {
 				return;
 			}
 
-			// XXX
-			if ($this->io->check_can_read($filename) && !$this->auth->can_read($filename)) {
+			if (!$this->io->canRead($filename)) {
 				$this->send("550 Permission denied.");
 				return;
 			} else {
@@ -662,9 +626,9 @@ class client {
 		}
 	}
 
-	function cmd_pasv() {
+	protected function cmd_pasv() {
 
-		$pool = &$this->CFG->pasv_pool;
+		$pool = &$this->pasv_pool;
 
 		socket_getsockname($this->connection, $local_addr);
 
@@ -733,7 +697,7 @@ class client {
 		$this->send("227 Entering Passive Mode ({$tmp},{$p1},{$p2}).");
 	}
 
-	function cmd_port() {
+	protected function cmd_port() {
 		$data = explode(",", $this->parameter);
 
 		if (count($data) != 6) {
@@ -767,7 +731,7 @@ class client {
 		$this->send("200 PORT command successful.");
 	}
 
-	function cmd_type() {
+	protected function cmd_type() {
 		$type = trim(strtoupper($this->parameter));
 
 		if (strlen($type) != 1) {
@@ -780,7 +744,7 @@ class client {
 		}
 	}
 
-	function cmd_size() {
+	protected function cmd_size() {
 		$file = trim($this->parameter);
 		
 		if (strpos($file, "..") !== false) {
@@ -805,7 +769,7 @@ class client {
 		$this->send("213 " . $size);
 	}
 
-	function cmd_noop() {
+	protected function cmd_noop() {
 		$this->send("200 Nothing Done.");
 	}
 	
@@ -815,11 +779,11 @@ class client {
 	DESCRIPTION: server specific commands...
 	NOTE: chmod feature built in by Phanatic (01/01/2003)
 	*/
-	function cmd_site() {
+	protected function cmd_site() {
 		$this->send($this->io->site($this->parameter));
 	}
 
-	function data_open() {
+	protected function data_open() {
 
 		if ($this->pasv) {
 			
@@ -854,7 +818,7 @@ class client {
 		return true;
 	}
 
-	function data_close() {
+	protected function data_close() {
 		if (! $this->pasv) {
 			if (is_resource($this->data_fsp)) fclose($this->data_fsp);
 			$this->data_fsp = false;
@@ -864,7 +828,7 @@ class client {
 		}
 	}
 
-	function data_send($str) {
+	protected function data_send($str) {
 
 		if ($this->pasv) {
 			socket_write($this->data_conn, $str, strlen($str));
@@ -873,7 +837,7 @@ class client {
 		}
 	}
 
-	function data_read() {
+	protected function data_read() {
 		if ($this->pasv) {
 			return socket_read($this->data_conn, 1024);
 		} else {
@@ -881,13 +845,13 @@ class client {
 		}
 	}
 
-	function data_eol() {
+	protected function data_eol() {
 		$eol = ($this->transfertype == "A") ? "\r\n" : "\n";
 		$this->data_send($eol);
 	}
 
 
-	function send($str) {
+	protected function send($str) {
 		socket_write($this->connection, $str . "\n");
 		if (! $this->loggedin) {
 		    $this->log->write("server: $str\n");
@@ -896,9 +860,10 @@ class client {
 		}
 	}
 
-	function transfer_text() {
+	protected function transfer_text() {
 		return ($this->transfertype == "A") ? "ASCII mode" : "Binary mode";
 	}
+
 
 }
 

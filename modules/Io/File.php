@@ -14,7 +14,7 @@
 ****************************************************
 */
 
-class io_file implements io_interface {
+class Io_File implements Io_Interface {
 
 	var $parameter;
 	var $root;

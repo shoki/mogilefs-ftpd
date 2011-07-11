@@ -4,7 +4,7 @@
  FTP to MogileFS translation layer
 */
 
-class io_mogilefs implements io_interface {
+class Io_MogileFs implements Io_Interface {
 	public $parameter;
 	public $root;
 	public $cwd = '/';

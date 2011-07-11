@@ -1,6 +1,6 @@
 <?php
 
-class io_mogilefs_domainswitch extends io_mogilefs {
+class Io_MogileFs_DomainNS extends Io_MogileFs {
 	protected $realcwd = '/';
 
 	public function ls($dir) {

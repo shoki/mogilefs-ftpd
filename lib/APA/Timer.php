@@ -1,6 +1,6 @@
 <?php
 /* timer structure */
-class Timer {
+class APA_Timer {
 	private $runtime;
 	private $function;
 	private $obj;

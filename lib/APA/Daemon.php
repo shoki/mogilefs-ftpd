@@ -27,7 +27,7 @@ define('DLOG_DEBUG', 32);
  * @copyright Copyright 2005 Seth
  * @since 1.0.3
  */
-abstract class Daemon
+abstract class APA_Daemon
 {
    /**#@+
     * @access public

@@ -14,15 +14,15 @@
 ****************************************************
 */
 
-class pool {
+class NanoFTP_Pool {
 
-	var $pool;
+	protected $pool;
 
-	function pool() {
+	public function __construct() {
 		$this->pool = array();
 	}
 
-	function add($value) {
+	public function add($value) {
 		if (! in_array($value, $this->pool)) {
 			return array_push($this->pool, $value);
 		} else {
@@ -30,7 +30,7 @@ class pool {
 		}
 	}
 
-	function remove($rem_value) {
+	public function remove($rem_value) {
 		if (in_array($rem_value, $this->pool)) {
 			$new_pool = array();
 			foreach ($this->pool as $value) {
@@ -46,7 +46,7 @@ class pool {
 		}
 	}
 
-	function exists($value) {
+	public function exists($value) {
 		return in_array($value, $this->pool);
 	}
 }

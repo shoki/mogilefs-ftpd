@@ -14,11 +14,11 @@
 ****************************************************
 */
 
-class database {
-	var $file;
-	var $sep;
+class NanoFTP_DBText {
+	protected $file;
+	protected $sep;
 
-	function database($f, $s) {
+	public function __construct($f, $s) {
 		if (!file_exists($f)) {
 			die("authentication file doesn't exist, quitting immediately...\n($f)\n");
 		}
@@ -26,7 +26,7 @@ class database {
 		$this->sep = $s;
 	}
 
-	function user_exist($u) {
+	public function user_exist($u) {
 		$fp = fopen($this->file, "r");
 		flock($fp, 1);
 		while (!feof($fp)) {
@@ -43,7 +43,7 @@ class database {
 		return false;
 	}
 
-	function user_get_property($u, $p) {
+	public function user_get_property($u, $p) {
 		if (gettype($p) == "string") {
 			switch ($p) {
 				case "username":

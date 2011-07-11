@@ -17,11 +17,8 @@
 */
 
 include(dirname(__FILE__)."/config.php");
-include($CFG->libdir."/server.php");
-include($CFG->libdir."/client.php");
-include($CFG->libdir."/daemon.php");
 
-class NanoFTP_Daemon extends Daemon {
+class Daemon extends APA_Daemon {
 	protected $server;
 
 	public function __construct() {
@@ -41,7 +38,7 @@ class NanoFTP_Daemon extends Daemon {
 		pcntl_signal(SIGCHLD, array($this, 'sigHandler'));
 		pcntl_signal(SIGTERM, array($this, 'sigHandler'));
 
-		$this->server = new server($CFG);
+		$this->server = new NanoFTP_Server($CFG);
 		$this->server->run();
 
 	}
@@ -85,10 +82,10 @@ if (ini_get('mbstring.func_overload') & 2) {
 }
 
 if ($CFG->daemonize) {
-	$daemon = new NanoFTP_Daemon();
+	$daemon = new Daemon();
 	$daemon->start();
 } else {
-	$server = new server($CFG);
+	$server = new NanoFTP_Server($CFG);
 	$server->run();
 }
 

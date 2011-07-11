@@ -1,7 +1,7 @@
 <?php
 
 /* runs timers and returns time till next timers has to be run */
-class TimerScheduler {
+class APA_TimerScheduler {
 	private $timerhandle = 10;
 	private $timers = array();
 
@@ -15,7 +15,7 @@ class TimerScheduler {
 
 	public function startTimer($runtime, $obj, $function, $args) {
 		$this->timerhandle++;
-		$this->timers[$this->timerhandle] = new Timer($runtime, 
+		$this->timers[$this->timerhandle] = new APA_Timer($runtime, 
 				$obj, $function, $args);
 		return $this->timerhandle;
 	}
