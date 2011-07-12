@@ -58,11 +58,12 @@ class Io_MogileFs implements Io_Interface {
 	public function ls($dir) {
 		if ($this->cwd === '/')  {
 			return $this->listMogileClasses();
-		} else 
+		} else  {
 			$path = ltrim($this->cwd, '/');
 			if ($this->cfg->mogilefs->searchlist)
 				$path .= '/'.$dir;
 			return $this->listMogileFiles($path, $this->cfg->mogilefs->listlimit);
+		}
 	}
 
 	public function rm($filename) {
