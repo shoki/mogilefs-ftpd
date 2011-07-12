@@ -30,6 +30,7 @@ if (extension_loaded('mbstring') && ini_get('mbstring.func_overload') & 2) {
 
 error_reporting(E_ALL);
 set_time_limit(0);
+declare(ticks = 1);
 
 function __autoload($class_name) {
 	$name = str_replace("_", "/", $class_name);

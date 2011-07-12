@@ -13,8 +13,6 @@ class NanoFTP_Daemon extends APA_Daemon {
 	}
 
 	public function _doTask() {
-		declare(ticks = 1);
-		pcntl_signal(SIGCHLD, array($this, 'sigHandler'));
 		pcntl_signal(SIGTERM, array($this, 'sigHandler'));
 
 		$this->server = new NanoFTP_Server($this->CFG);
@@ -36,7 +34,6 @@ class NanoFTP_Daemon extends APA_Daemon {
 				exit(0);
 				break;
 			case SIGCHLD:
-				$this->server->reaper();
 				break;
 			default:
 				$this->_logMessage("unknown signal: ".$signo);
@@ -45,8 +42,7 @@ class NanoFTP_Daemon extends APA_Daemon {
 	}
 
 	public function _logMessage($msg, $level = DLOG_NOTICE) {
-		if (is_object($this->server) && is_object($this->server->log)) $this->server->log->write($msg."\n");
-		else error_log($msg);
+		error_log($msg);
 	}
 }
 

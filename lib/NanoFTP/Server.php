@@ -7,13 +7,11 @@ class NanoFTP_Server {
 	protected $socket;
 	protected $clients;
 	
-	protected $log;
-	protected $clientID;
+	public $log;
+	public $clientID;
+	public $isChild;
 
-	protected $isChild;
-
-	protected $timers = array();
-	protected $scheduler = array();
+	protected $scheduler = null;
 
 	protected $pids = array();
 
@@ -34,6 +32,8 @@ class NanoFTP_Server {
 
 		$this->scheduler = APA_TimerScheduler::get();
 		$this->setProcTitle("nanoftpd [master]");
+
+		pcntl_signal(SIGCHLD, array($this, 'reaper'));
 	}
 
 	protected function setup_socket() {
@@ -63,20 +63,16 @@ class NanoFTP_Server {
 		$this->setup_socket();
 		// set initial vars and loop until $abort is set to true
 		$abort = false;
+		$sleep = 1;	/* default select timeout */
 
 		while (! $abort) {
-			/* reap manually when not running as a daemon */
-			if ($this->clientID == 'server' && !$this->CFG->daemonize) {
-				$this->reaper();
-			}
-
 			// sockets we want to pay attention to
 			$set_array = array($this->clientID => $this->socket);
 			
 			$set = $set_array;
 			//echo($this->clientID." select ".getmypid()."\n");
 			// avoid warnings aboit EINTR
-			if (@socket_select($set, $set_w = NULL, $set_e = NULL, 1, 0) > 0) {
+			if (@socket_select($set, $set_w = NULL, $set_e = NULL, $sleep, 0) > 0) {
 				
 				// loop through sockets
 				foreach($set as $sock) {
@@ -121,7 +117,7 @@ class NanoFTP_Server {
 				}
 			}
 			/* got some time to run the timers */
-			$this->scheduler->runTimers();
+			$sleep = $this->scheduler->runTimers(400);
 		}
 	}
 

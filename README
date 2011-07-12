@@ -61,6 +61,9 @@ on rmdir command delete a MogileFS class with the given directory name.
 mogilefs->mindevcount = 2;
 mindevcount parameter for creating MogileFS classes.
 
+mogilefs->defaultdomain = "default";
+mogilefs class to use when when uploading files in MogileFs_FlatNS.
+
 
 IO Modules
 ==========

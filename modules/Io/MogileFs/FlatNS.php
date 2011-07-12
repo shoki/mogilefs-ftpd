@@ -10,9 +10,7 @@ class Io_Mogilefs_Flat extends Io_MogileFs {
 	}
 
 	protected function getMogileClass($filename) {
-		if (parent::getMogileClass($this->cwd) === false) {
-			return $this->cfg->mogilefs->defaultclass;
-		}
+		return $this->cfg->mogilefs->defaultclass;
 	}
 
 

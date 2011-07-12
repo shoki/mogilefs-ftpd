@@ -69,6 +69,7 @@ class Io_MogileFs_DomainNS extends Io_MogileFs {
 	}
 
 	public function getFilename($path) {
+		// XXX: broken, need to rip domain
 		return parent::getFilename($path);
 	}
 }

@@ -56,7 +56,8 @@ class NanoFTP_Client {
 		$this->scheduler = APA_Timerscheduler::get();
 
 		/* handle sigpipe */
-		pcntl_signal(SIGPIPE, array($this, 'disconnect'));
+		pcntl_signal(SIGPIPE, SIG_IGN);
+		pcntl_signal(SIGTERM, array($this, 'signalHandler'));
 	}
 
 	public function __destruct() {
@@ -77,6 +78,17 @@ class NanoFTP_Client {
 		$this->send("220 " . $this->CFG->server_name);
 
 		if (! is_resource($this->connection)) die;
+	}
+
+	public function signalHandler($signo) {
+		switch ($signo) {
+			case SIGTERM:
+				$this->disconnect("421 server died. Connection closed.");
+				break;
+			default:
+				$this->log->msg("unknown signal: ".$signo."\n");
+				break;
+		}
 	}
 
 	public function getUser() {
@@ -202,8 +214,8 @@ class NanoFTP_Client {
 		}
 	}
 
-	public function disconnect($reason = null) {
-		if ($reason)
+	public function disconnect($reason = null ) {
+		if ($reason !== null)
 			$this->send($reason);
 
 		if (is_resource($this->connection)) socket_close($this->connection);
@@ -516,18 +528,6 @@ class NanoFTP_Client {
 		$file = trim($this->parameter);
 
 		$io = $this->io;
-
-		/* XXX: doesn't really make sense here, make this io module specific
-		if ($io->exists($file)) {
-			if ($io->type($file) == "dir") {
-				$this->send("553 Requested action not taken.");
-				return;
-			} elseif (! $io->rm($file)) {
-				$this->send("553 Requested action not taken.");
-				return;
-			}
-		}
-		*/
 
 		$this->send("150 File status okay; openening " . $this->transfer_text() . " connection.");
 		$this->data_open();

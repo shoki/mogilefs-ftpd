@@ -249,6 +249,9 @@ abstract class APA_Daemon
 	  fclose(STDOUT);
 	  fclose(STDERR);
 	  fclose(STDIN);
+	  fopen('/dev/null', 'r');
+	  fopen('/dev/null', 'w');
+	  fopen('/dev/null', 'w');
 
       @chdir($this->homePath);
       umask(0);

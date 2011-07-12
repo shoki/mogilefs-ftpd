@@ -3,7 +3,7 @@
 /* runs timers and returns time till next timers has to be run */
 class APA_TimerScheduler {
 	private static $timerhandle = 10;
-	private static $timers = array();
+	private $timers = array();
 	private static $instance;
 
 	public static function &get() {
@@ -50,9 +50,10 @@ class APA_TimerScheduler {
 	}
 
 	/* run timers on time and return time till next timer has to start */
-	public function runTimers() {
+	public function runTimers($max_sleep = 60) {
 		$cur = time();
-		$diff = $prevdiff = 0;
+		$diff = 0;
+		$prevdiff = $max_sleep;
 
 		if (!empty($this->timers)) {
 			foreach ($this->timers as $key => $timer) {
@@ -60,11 +61,11 @@ class APA_TimerScheduler {
 					$timer->run();
 					$this->stopTimer($key);
 				}
-				if (!isset($prevdiff) || $diff < $prevdiff && $diff) 
+				if ($diff < $prevdiff && $diff) 
 					$prevdiff = $diff;
 			}
 		}
-		$ret = $prevdiff ? $prevdiff : 1 ;
+		$ret = $prevdiff;
 		return $ret;
 	}
 
