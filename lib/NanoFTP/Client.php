@@ -577,7 +577,7 @@ class NanoFTP_Client {
 		    $io->open($file, false, true);
 		}
 	    } else {
-		$io->open($file, true);
+			$io->open($file, true);
 	    }	    
 	    
 	    if ($this->pasv) {

@@ -72,7 +72,7 @@ implement your own modules and plug them into nanoftpd. There are some modules
 in modules/Io to illustrate what you can do with it.
 
 Io_File
-Basic file backend. No MogileFS Support.
+Basic file backend. No MogileFS Support. 
 
 Io_MogileFs
 MogileFs Backend where the first directory level represents the MogileFs
@@ -100,29 +100,27 @@ used a text based user database.
 
 Hints
 =====
-1. Io_File is untested.
-
-2. default path convention is <mogilefs class>/<filename>. If your MogileFS is not
+1. default path convention is <mogilefs class>/<filename>. If your MogileFS is not
 using this convention you can still use this module but you may have to 
 adjust io_mogilfs.php.
 
-3. PHP error logs go to log/nanoftpd.err. Application logs go to
+2. PHP error logs go to log/nanoftpd.err. Application logs go to
 log/nanoftpd.log
 
-4. password for the shipped users in users text database is 'test'.
+3. password for the shipped users in users text database is 'test'.
 
-5. when listing files in classes there is a limit for the list.  If you have 
+4. when listing files in classes there is a limit for the list.  If you have 
 a large MogileFS class it doesn't really makes sense to list millions of 
 files (tough it is possible if you adjust the listlimit).
 
-6. MKD command can create MogileFS classes and RMD can delete them. 
+5. MKD command can create MogileFS classes and RMD can delete them. 
 
-7. you can even rename files in MogileFS using the RNFR RNTO commands.
+6. you can even rename files in MogileFS using the RNFR RNTO commands.
 
 
 Compatibility
 =============
 Used to work with:
 * PHP FTP extension of PHP 5.2.6 
-* FileZilla on Ubuntu
+* FileZilla 3.3.5.1 on Ubuntu
 * Cyberduck Version 4.0.2 (8601) on MacOS X

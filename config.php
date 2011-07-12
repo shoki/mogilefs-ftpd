@@ -24,13 +24,13 @@ $CFG->tmpdir = "$CFG->rootdir/tmp";			// temporary files direcotry
 $CFG->logdir = "$CFG->rootdir/log";			// log and pid files
 ini_set('include_path', get_include_path().":".dirname(__FILE__).":".$CFG->libdir.":".$CFG->moddir);
 
-$CFG->daemonize	= true;						// wether to daemonize or not
+$CFG->daemonize	= false;						// wether to daemonize or not
 $CFG->pidfile = "$CFG->logdir/nanoftpd.pid";	// pidfile store
 ini_set('error_log', $CFG->logdir."/nanoftpd.err");	// PHP error log
 $CFG->userid = 0;							// userid of daemon user
 $CFG->groupid = 0;							// groupid of daemon user
 $CFG->listen_addr = "0.0.0.0";				// IP address where nanoFTPd should listen
-$CFG->listen_port = 21;						// port where nanoFTPd should listen
+$CFG->listen_port = 2121;						// port where nanoFTPd should listen
 $CFG->low_port = 15000;						// lowest PASV port
 $CFG->high_port = 25000;					// highest PASV port
 $CFG->idle_time	= 300;						// close conn after this amount of seconds when inactive

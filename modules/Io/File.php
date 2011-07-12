@@ -16,20 +16,25 @@
 
 class Io_File implements Io_Interface {
 
-	var $parameter;
-	var $root;
-	var $cwd;
+	public $parameter;
+	public $root;
+	public $cwd;
 
-	var $fp;
+	protected $fp;
+	protected $lastError;
 
-	function io_file() {
+	public function __construct() {
 		$this->root = "/tmp";
 		$this->cwd = "/";
 	}
 
-	function cwd() {
+	public function init() {
+		return true;
+	}
 
-		$dir = trim($this->parameter);
+	public function cwd($dir) {
+
+		$dir = trim($dir);
 		$cwd_path = preg_split("/\//", $this->cwd, -1, PREG_SPLIT_NO_EMPTY);
 		$new_cwd = "";
 
@@ -71,11 +76,11 @@ class Io_File implements Io_Interface {
 		}
 	}
 
-	function pwd() {
+	public function pwd() {
 		return $this->cwd;
 	}
 
-	function ls() {
+	public function ls($dir) {
 		$list = array();
 
 		if ($handle = opendir($this->root . $this->cwd)) {
@@ -123,7 +128,7 @@ class Io_File implements Io_Interface {
 		}
 	}
 
-	function rm($filename) {
+	public function rm($filename) {
 	    if (substr($filename, 0, 1) == "/") {
 		return unlink($this->root . $filename);
 	    } else {	
@@ -131,7 +136,7 @@ class Io_File implements Io_Interface {
 	    }
 	}
 
-	function size($filename) {
+	public function size($filename) {
 	    if (substr($filename, 0, 1) == "/") {
 		return filesize($this->root . $filename);
 	    } else {
@@ -139,7 +144,7 @@ class Io_File implements Io_Interface {
 	    }
 	}
 
-	function exists($filename) {
+	public function exists($filename) {
 	    if (substr($filename, 0, 1) == "/") {
 		return (@file_exists($this->root . $filename));
 	    } else {
@@ -147,7 +152,11 @@ class Io_File implements Io_Interface {
 	    }
 	}
 
-	function type($filename) {
+	public function mdtm($filename) {
+		return date("YmdHis", filemtime($filename));
+	}
+
+	public function type($filename) {
 	    if (substr($filename, 0, 1) == "/") {
 			return (filetype($this->root . $filename));
 	    } else {
@@ -155,7 +164,7 @@ class Io_File implements Io_Interface {
 	    }
 	}
 	
-	function md($dir) {
+	public function md($dir) {
     	    if (substr($dir, 0, 1) == "/") {
 		return (@mkdir($this->root . $dir));
 	    } else {
@@ -163,7 +172,7 @@ class Io_File implements Io_Interface {
 	    }
 	}
 	
-	function rd($dir) {
+	public function rd($dir) {
 	    if (substr($dir, 0, 1) == "/") {
 		return (@rmdir($this->root . $dir));
 	    } else {
@@ -171,7 +180,7 @@ class Io_File implements Io_Interface {
 	    }
 	}
 	
-	function rn($from, $to) {
+	public function rn($from, $to) {
     	    if (substr($from, 0, 1) == "/") {
 		$ff = $this->root . $from;
 	    } else {
@@ -187,18 +196,23 @@ class Io_File implements Io_Interface {
 	    return (rename($ff, $ft));
 	}
 
-	function read($size) {
+	public function read($size) {
 		return fread($this->fp, $size);
 	}
 
-	function write($str) {
+	public function write($str) {
 		fwrite($this->fp, $str);
 	}
 
-	function open($filename, $create = false, $append = false) {
+	public function open($filename, $create = false, $append = false) {
 	    clearstatcache();	
-	    $type = ($create) ? "w" : "r";
-	    $type = ($append) ? "a" : "w";
+		if ($create) {
+			$type = "w";
+		} elseif ($append) {
+			$type = "a";
+		} else {
+			$type = "r";
+		}
 	    if (substr($filename, 0, 1) == "/") {
 			return ($this->fp = fopen($this->root . $filename, $type));
 	    } else {
@@ -206,12 +220,12 @@ class Io_File implements Io_Interface {
 	    }
 	}
 
-	function close() {
+	public function close() {
 		fclose($this->fp);
 	}
 	
 	/* permission output added by Phanatic */
-	function perms($mode) {
+	public function perms($mode) {
 	    /* Determine Type */
 	    if( $mode & 0x1000 )
 			$type='p'; /* FIFO pipe */
@@ -257,7 +271,7 @@ class Io_File implements Io_Interface {
 	    return $permstr;
 	}
 
-	function validate_filename($filename) {
+	public function validate_filename($filename) {
 		/* no path prefix allowed */
 		return is_file($filename);
 	}
@@ -317,6 +331,10 @@ class Io_File implements Io_Interface {
 			    $message = "502 Command not implemented.";
 	    }
 		return $message;
+	}
+
+	public function getLastError() {
+		return $this->lastError;
 	}
 
 	public function help() {
