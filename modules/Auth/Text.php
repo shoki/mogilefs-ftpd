@@ -45,16 +45,17 @@ class Auth_Text implements Auth_Interface {
 	}
 
 	public function getUserid($username) {
-		return $this->user_uid;
+		return (isset($this->users[$username]) ? $this->users[$username]['uid'] : false);
 	}
 
 	public function getGroupid($username) {
-		return $this->user_gid;
+		return (isset($this->users[$username]) ? $this->users[$username]['gid'] : false);
 	}
 
-	public function getIoModule() {
-		return $this->io_module;
+	public function getIoModule($username) {
+		return (isset($this->users[$username]) ? $this->users[$username]['io_module'] : false);
 	}
+
 }
 
 ?>

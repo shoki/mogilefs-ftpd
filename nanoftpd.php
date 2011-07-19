@@ -37,6 +37,11 @@ function __autoload($class_name) {
     require_once $name . '.php';
 }
 
+if ($CFG->listen_port < 1025 && posix_getuid() != 0) {
+	echo("you need to be root to bind to ports < 1024!\n");
+	exit(1);
+}
+
 if ($CFG->daemonize) {
 	$daemon = new NanoFTP_Daemon($CFG);
 	$daemon->start();

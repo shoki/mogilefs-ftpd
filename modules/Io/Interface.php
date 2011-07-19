@@ -23,6 +23,8 @@ interface Io_Interface {
 	public function canWrite($filename) ;
 	public function canRead($filename) ;
 	public function getLastError() ;
+	public function getCwd() ;
+	public function getRoot() ;
 	public function help() ;
 }
 

@@ -5,7 +5,7 @@ interface Auth_Interface {
 	public function authenticate($username, $password);
 	public function getUserid($username);
 	public function getGroupid($username);
-	public function getIoModule();
+	public function getIoModule($username);
 }
 
 ?>

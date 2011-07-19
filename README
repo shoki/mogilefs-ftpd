@@ -24,9 +24,10 @@ Installation
 ============
 You need at least PHP 5.2.6 and these PHP extensions to run mogilefs-ftpd:
 
-* sockets
+* sockets 
 * pcntl
-* PECL MogileFS (https://pecl.php.net/mogilefs)
+* posix
+* PECL MogileFS (>= 0.9.1) (https://pecl.php.net/mogilefs)
 * PECL proctitle (optional)
 
 There is a logrotate config and a init script available in the contrib
@@ -61,7 +62,7 @@ on rmdir command delete a MogileFS class with the given directory name.
 mogilefs->mindevcount = 2;
 mindevcount parameter for creating MogileFS classes.
 
-mogilefs->defaultdomain = "default";
+mogilefs->defaultclass = "default";
 mogilefs class to use when when uploading files in MogileFs_FlatNS.
 
 

@@ -5,9 +5,8 @@
 */
 
 class Io_MogileFs implements Io_Interface {
-	public $parameter;
-	public $root;
-	public $cwd = '/';
+	protected $root;
+	protected $cwd = '/';
 	protected $store;
 	protected $saveonclose = false;
 	protected $lastError;
@@ -158,6 +157,9 @@ class Io_MogileFs implements Io_Interface {
 		}
 		$this->tmpfile = $this->cfg->tmpdir."/mogileftp_".getmypid().'_'.uniqid();
 		$filename = $this->getFilename($filename);
+
+		$this->filename = '';
+		$this->saveonclose = false;
 
 		if ($create) {
 			$mode = "w";
@@ -340,6 +342,14 @@ class Io_MogileFs implements Io_Interface {
 
 	public function getLastError() {
 		return $this->lastError;
+	}
+
+	public function getCwd() {
+		return $this->cwd;
+	}
+
+	public function getRoot() {
+		return $this->root;
 	}
 
 	protected function msg($msg) {

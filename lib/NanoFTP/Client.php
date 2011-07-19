@@ -131,8 +131,6 @@ class NanoFTP_Client {
 					return $this->return;
 			}	
 
-			$this->io->parameter = $this->parameter;
-			
 			$this->log->write($this->user . ": ".trim($this->buffer)."\n");
 
 			if (! $this->loggedin) {
@@ -281,7 +279,6 @@ class NanoFTP_Client {
 
 		try {
 			$module = "Auth_" . $this->CFG->auth->module;
-			//require_once($this->CFG->moddir . "/" . $module . '.php');
 			if (!class_exists($module))
 				throw new Exception("failed to load authentication module: ".$module);
 
@@ -289,8 +286,7 @@ class NanoFTP_Client {
 			if (!$this->auth->authenticate($this->user, $this->parameter))
 				throw new Exception("authentication failed");
 
-			$io_module = $this->auth->getIoModule();
-			//require_once($this->CFG->moddir . "/" . $io_module . '.php');
+			$io_module = "Io_".$this->auth->getIoModule($this->user);
 			if (!class_exists($io_module))
 				throw new Exception("failed to load io module: ".$io_module);
 
@@ -388,9 +384,9 @@ class NanoFTP_Client {
 		}
 
 		if (substr($this->parameter, 0, 1) == "/") {
-			$file = $this->io->root.$this->parameter;
+			$file = $this->io->getRoot().$this->parameter;
 		} else {
-			$file = $this->io->root.$this->io->cwd.$this->parameter;
+			$file = $this->io->getRoot().$this->io->getCwd().$this->parameter;
 		}
 		if (!$this->io->validate_filename($file)) { 
 			$this->send("550 Resource is not a file.");
@@ -611,7 +607,7 @@ class NanoFTP_Client {
 		}
 
 		$io = $this->io;
-		$filename = $this->io->root.$this->io->cwd.$file;
+		$filename = $this->io->getRoot().$this->io->getCwd().$file;
 
 		if (!$this->io->validate_filename($filename)) {
 			$this->send("550 Resource is not a file. $filename");
@@ -685,8 +681,9 @@ class NanoFTP_Client {
 		}
 
 		/* try to get a unused port slot */
-		// XXX: record already tested ports and fail if exhausted
-		for ($try = 0; $try < 1000; $try++) { 
+		$max_sockets = $high_port - $low_port;
+
+		for ($try = 0; $try < $max_sockets; $try++) { 
 			/* get random port */
 			$port = mt_rand($low_port, $high_port);
 			if (! $pool->exists($port)) {

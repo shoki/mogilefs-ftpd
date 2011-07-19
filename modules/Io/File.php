@@ -16,9 +16,8 @@
 
 class Io_File implements Io_Interface {
 
-	public $parameter;
-	public $root;
-	public $cwd;
+	protected $root;
+	protected $cwd;
 
 	protected $fp;
 	protected $lastError;
@@ -290,10 +289,10 @@ class Io_File implements Io_Interface {
 	
 	    switch (strtolower($p[0])) {
 			case "uid":
-			    $message = "214 UserID: ".$this->client->auth->getUserid();
+			    $message = "214 UserID: ".$this->client->auth->getUserid($this->client->getUser());
 		    	break;
 			case "gid":
-			    $message = "214 GroupID: ".$this->client->auth->getGroupid();
+			    $message = "214 GroupID: ".$this->client->auth->getGroupid($this->client->getUser());
 			    break;
 			case "chmod":
 			    if (!isset($p[1]) || !isset($p[2])) {
@@ -335,6 +334,14 @@ class Io_File implements Io_Interface {
 
 	public function getLastError() {
 		return $this->lastError;
+	}
+
+	public function getCwd() {
+		return $this->cwd;
+	}
+
+	public function getRoot() {
+		return $this->root;
 	}
 
 	public function help() {
