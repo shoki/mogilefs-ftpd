@@ -23,9 +23,9 @@ class NanoFTP_Client {
 	// active ftp data socket pointer
 	protected $data_fsp;
 
-	public $command;
-	public $parameter;
-	public $return;
+	protected $command;
+	protected $parameter;
+	protected $return;
 
 	protected $io;
 	public $auth;
@@ -34,9 +34,7 @@ class NanoFTP_Client {
 	protected $scheduler;
 	protected $timers;
 
-	public function __construct($CFG, $connection, $id) {
-		
-		$this->id = $id;
+	public function __construct($CFG, $connection) {
 		$this->connection = $connection;
 		$this->CFG = $CFG;
 		
@@ -61,10 +59,7 @@ class NanoFTP_Client {
 	}
 
 	public function __destruct() {
-		/* kill all timers */
-		foreach ($this->timers as $timer) {
-			$this->scheduler->stopTimer($timer);
-		}
+		$this->disconnect();
 	}
 	
 	public function init() {
@@ -216,12 +211,18 @@ class NanoFTP_Client {
 		if ($reason !== null)
 			$this->send($reason);
 
+		foreach ($this->timers as $timer) {
+			$this->scheduler->stopTimer($timer);
+		}
+
 		if (is_resource($this->connection)) socket_close($this->connection);
 
 		if ($this->pasv) {
 			if (is_resource($this->data_conn)) socket_close($this->data_conn);
 			if (is_resource($this->data_socket)) socket_close($this->data_socket);
 		}
+
+		// XXX: move exit outside this class
 		exit(0);
 	}
 

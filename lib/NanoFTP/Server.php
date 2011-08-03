@@ -8,8 +8,7 @@ class NanoFTP_Server {
 	protected $clients;
 	
 	public $log;
-	public $clientID;
-	public $isChild;
+	public $isClient = false;
 
 	protected $scheduler = null;
 
@@ -20,12 +19,11 @@ class NanoFTP_Server {
 		$this->CFG = $CFG;
 		$this->CFG->log = $this->log = new NanoFTP_Log($CFG);
 		$this->log->setPrefix("[".getmypid()."]");
-		$this->isChild = false;
 		$this->init();
 	}
 
 	public function init() {
-		$this->clientID = 'server';
+		$this->isClient = false;
 
 		$this->socket = false;
 		$this->clients = Array();
@@ -67,11 +65,10 @@ class NanoFTP_Server {
 
 		while (! $abort) {
 			// sockets we want to pay attention to
-			$set_array = array($this->clientID => $this->socket);
+			$set_array = array(0 => $this->socket);
 			
 			$set = $set_array;
-			//echo($this->clientID." select ".getmypid()."\n");
-			// avoid warnings aboit EINTR
+			// avoid warnings about EINTR
 			if (@socket_select($set, $set_w = NULL, $set_e = NULL, $sleep, 0) > 0) {
 				
 				// loop through sockets
@@ -79,8 +76,9 @@ class NanoFTP_Server {
 					$name = array_search ($sock, $set_array);
 
 					if ($name === false) {
+						/* skip unknown socket */
 						continue;
-					} elseif ($name == "server") {
+					} elseif (!$this->isClient) {
 						if (! ($conn = socket_accept($this->socket))) {
 							$this->socket_error();
 						} else {
@@ -89,28 +87,20 @@ class NanoFTP_Server {
 								continue;
 						}
 					} else {
-						$clientID = $name;
-
 						// client socket has incoming data
 						if (($read = @socket_read($sock, 1024)) === false || $read == '') {
 							if ($read != '')
 								$this->socket_error();
 
 							// remove client from array
-							$this->remove_client($clientID);
+							$this->remove_client($sock);
 						} else {
-							// only want data with a newline
-							if (strchr(strrev($read), "\n") === false) {
-								$this->clients[$clientID]->appendBuffer($read);
+							$this->clients[$sock]->appendBuffer($read); /* when \n was received, start parsing the buffer */
+							if (strstr($read, "\n") !== false && !$this->clients[$sock]->interact()) {
+								$this->clients[$sock]->disconnect();
+								$this->remove_client($sock);
 							} else {
-								$this->clients[$clientID]->appendBuffer(str_replace("\n", "", $read));
-
-								if (! $this->clients[$clientID]->interact()) {
-									$this->clients[$clientID]->disconnect();
-									$this->remove_client($clientID);
-								} else {
-									$this->clients[$clientID]->resetBuffer();
-								}
+								$this->clients[$sock]->resetBuffer();
 							}
 						}
 					}
@@ -122,25 +112,20 @@ class NanoFTP_Server {
 	}
 
 	protected function add_client($conn) {
-		$clientID = uniqid("client_");
-
 		$pid = pcntl_fork() ;
 		if ($pid > 0) {
 			/* I AM YOUR FATHER */
 			/* close the client socket, we don't need it */
 			socket_close($conn);
-			$this->pids[$pid] = $clientID;
+			$this->pids[$pid] = $conn;
 			return true;
 		} elseif ($pid === -1) {
 			$this->log->write("could not fork");
 			socket_close($conn);
 			return false;
 		} else {
-			// indicate that we are a child worker
-			$this->isChild = true;
-
 			// indicate this is not a server
-			$this->clientID = $clientID;
+			$this->isClient = true;
 
 			/* close the listening socket */
 			socket_close($this->socket);
@@ -149,10 +134,10 @@ class NanoFTP_Server {
 			$this->setProcTitle("nanoftpd [worker]");
 
 			// add socket to client list and announce connection
-			$this->clients[$clientID] = new NanoFTP_Client($this->CFG, $conn, $clientID);
+			$this->clients[$conn] = new NanoFTP_Client($this->CFG, $conn);
 
 			// everything is ok, initialize client
-			$this->clients[$clientID]->init();
+			$this->clients[$conn]->init();
 			return true;
 		}
 	}
@@ -180,29 +165,18 @@ class NanoFTP_Server {
 		}
 	}
 
-	protected function get_client_connections() {
-		$conn = array();
-
-		foreach($this->clients as $clientID => $client) {
-			$conn[$clientID] = $client->connection;
-		}
-
-		return $conn;
-	}
-
-	public function disconnect_client($clientID, $msg = "421 administrative disconnect") {
-		if (!isset($this->clients[$clientID])) return false;
-		$c = $this->clients[$clientID];
+	public function disconnect_client($sock, $msg = "421 administrative disconnect") {
+		if (!isset($this->clients[$sock])) return false;
+		$c = $this->clients[$sock];
 		$c->disconnect($msg);
-		$this->remove_client($clientID);
+		$this->remove_client($sock);
 	}
 
-	protected function remove_client($clientID) {
-		if (isset($this->clients[$clientID])) {
-			unset($this->clients[$clientID]);
+	protected function remove_client($sock) {
+		if (isset($this->clients[$sock])) {
+			$this->clients[$sock]->disconnect();
+			unset($this->clients[$sock]);
 		}
-		/* child done */
-		if ($this->clientID != 'server') exit(0);
 	}
 
 	protected function socket_error() {
@@ -213,6 +187,22 @@ class NanoFTP_Server {
 	
 	protected function setProcTitle($str) {
 		if (function_exists("setproctitle")) setproctitle($str);
+	}
+
+	public function shutdown($signo = SIGTERM) {
+		$this->broadcast_signal($signo);
+		$all_dead = false;
+		do {
+			// call reaper manually... SIGCHLD comes to late
+			$this->reaper();
+			if (count($this->pids) !== 0) {
+				$this->log->write("waiting for ".count($this->pids)." childs to die\n");
+				sleep(1);
+			} else {
+				$all_dead = true;
+			}
+		} while (!$all_dead);
+		$this->log->write("shutdown finished\n");
 	}
 }
 

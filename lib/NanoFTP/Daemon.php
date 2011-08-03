@@ -14,6 +14,7 @@ class NanoFTP_Daemon extends APA_Daemon {
 
 	public function _doTask() {
 		pcntl_signal(SIGTERM, array($this, 'sigHandler'));
+		pcntl_signal(SIGINT, array($this, 'sigHandler'));
 
 		$this->server = new NanoFTP_Server($this->CFG);
 		$this->server->run();
@@ -23,14 +24,12 @@ class NanoFTP_Daemon extends APA_Daemon {
 	public function sigHandler($signo) {
 		switch ($signo) {
 			case SIGTERM:
+			case SIGINT:
 				// cleanup childs and exit
 				$this->_logMessage("exiting on SIGTERM");
-				/* father will kill its childs */
-				if (!$this->server->isChild) {
-					$this->server->broadcast_signal($signo);
-					// XXX should wait here until all childs are gone
-					$this->releaseDaemon();
-				}
+				if (is_object($this->server))
+					$this->server->shutdown($signo);
+				$this->releaseDaemon();
 				exit(0);
 				break;
 			case SIGCHLD:
