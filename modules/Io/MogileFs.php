@@ -14,6 +14,7 @@ class Io_MogileFs implements Io_Interface {
 	protected $mogileClass;
 	protected $mogileClasses;
 	protected $mogileDomains;
+	protected $currentDomain;
 	protected $fp;
 
 	public function __construct($client) {
@@ -21,6 +22,7 @@ class Io_MogileFs implements Io_Interface {
 		$this->cfg = $client->CFG;
 		$this->log = $this->cfg->log;
 		$this->root = "";
+		$this->currentDomain = $this->cfg->mogilefs->domain;
 	}
 
 	public function __destruct() {
@@ -29,7 +31,7 @@ class Io_MogileFs implements Io_Interface {
 
 	public function init() {
 		$this->connectMogile($this->cfg->mogilefs->tracker,
-				$this->cfg->mogilefs->port, $this->cfg->mogilefs->domain,
+				$this->cfg->mogilefs->port, $this->currentDomain,
 				$this->cfg->mogilefs->timeout);
 		$this->listMogileClasses();
 	}
@@ -104,7 +106,7 @@ class Io_MogileFs implements Io_Interface {
 		if (!$this->cfg->mogilefs->canmkdir) return false;
 
 		try {
-			$this->store->createClass($this->cfg->mogilefs->domain, $this->getFilename($dir), $this->cfg->mogilefs->mindevcount);
+			$this->store->createClass($this->currentDomain, $this->getFilename($dir), $this->cfg->mogilefs->mindevcount);
 			return true;
 		} catch (Exception $e) {
 			$this->msg("createClass failed: ".$e->getMessage()."\n");
@@ -116,7 +118,7 @@ class Io_MogileFs implements Io_Interface {
 		if (!$this->cfg->mogilefs->canrmdir) return false;
 
 		try {
-			$this->store->deleteClass($this->cfg->mogilefs->domain, $this->getFilename($dir));
+			$this->store->deleteClass($this->currentDomain, $this->getFilename($dir));
 			return true;
 		} catch (Exception $e) {
 			$this->msg("deleteClass failed: ".$e->getMessage()."\n");
@@ -226,7 +228,7 @@ class Io_MogileFs implements Io_Interface {
 		}
 		for ($x = 1; $x <= $domains['domains']; $x++) {
 			$this->mogileDomains[$domains['domain'.$x]] = true;
-			if ($domains['domain'.$x] == $this->cfg->mogilefs->domain) {
+			if ($domains['domain'.$x] == $this->currentDomain) {
 				for ($y = 1; $y <= $domains['domain'.$x.'classes']; $y++) {
 					$this->mogileClasses[$domains['domain'.$x.'class'.$y.'name']] = true;
 					$info = array ('name' => $domains['domain'.$x.'class'.$y.'name'],
@@ -252,6 +254,7 @@ class Io_MogileFs implements Io_Interface {
 		do {
 			++$loops;
 			try {
+				$this->msg("listkeys ".$key."\n");
 				$list = $this->store->listKeys($key, $next_after, $list_limit);
 
 				for ($x = 1; $x <= $list['key_count']; $x++) {
@@ -353,7 +356,7 @@ class Io_MogileFs implements Io_Interface {
 	}
 
 	protected function msg($msg) {
-		$this->log->write(__CLASS__.": domain=".$this->cfg->mogilefs->domain." ".$msg);
+		$this->log->write(__CLASS__.": domain=".$this->currentDomain." ".$msg);
 	}
 
 	public function help() {

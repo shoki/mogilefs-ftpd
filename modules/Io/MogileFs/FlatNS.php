@@ -1,6 +1,6 @@
 <?php
 
-class Io_Mogilefs_Flat extends Io_MogileFs {
+class Io_Mogilefs_FlatNS extends Io_MogileFs {
 	public function ls($dir) {
 		return $this->listMogileFiles($dir, $this->cfg->mogilefs->listlimit);
 	}
